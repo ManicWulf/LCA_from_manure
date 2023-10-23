@@ -132,4 +132,34 @@ def lca_calculations(n_clicks, farm_paths_list, config_paths_dict):
     return dash.no_update
 
 
+@callback(
+    Output('graph-container', 'children'),
+    Input('calc-data-file-paths', 'data'),
+    prevent_initial_callback=True
+)
+def plot_co2_sunburst(calc_file_paths_dict):
+    """
+    generate the sunburst charts for CO2-eq. emissions
+    :param calc_file_paths_dict: dictionary with the farm file paths
+    :return:
+    """
+    #create list with titles for the charts
+    title_list = ['CO2 Sunburst chart for No treatment pathway', 'CO2 Sunburst chart for ad only pathway',
+                  'CO2 Sunburst chart for AD with biogas upgrading pathway', 'CO2 Sunburst chart for steam pretreatment with AD pathway',
+                  'CO2 Sunburst chart for steam pretreatment with AD and Biogas upgrading pathway']
+
+    # remove the first entry of the calc_file_dict, since we won't be needing the 'farm-calc' entry
+    calc_file_paths_dict.pop('farm-calc', None)
+
+    # create empty list for returning the results
+    graphs_list = []
+
+    # iterate through the calc_file dict and title list to create the charts
+    for (key, filepath), title in zip(calc_file_paths_dict.items(), title_list):
+        if filepath is not None:
+            dataframe = dfc.read_file_to_dataframe(filepath)
+            graphs_list.append(pac.sunburst_co2(dataframe, title))
+
+    return graphs_list
+
 
