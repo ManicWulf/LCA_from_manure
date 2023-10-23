@@ -1,0 +1,16 @@
+,name,num-animals,days-outside,hours-outside,manure-type,additional-data
+0,Milchkuh,100,180,9,1,0
+1,Mutterkuh,0,0,0,1,0
+2,Aufzuchtrind,0,0,0,1,0
+3,Mastkalb,0,0,0,1,0
+4,Mutterkuhkalb,0,0,0,1,0
+5,RiendviehMast,0,0,0,1,0
+6,Zuchtstier,0,0,0,1,0
+0,Mastschwein,0,0,0,1,0
+1,Zuchtschweineplatz,0,0,0,1,0
+0,Legehenne,0,0,0,1,0
+1,Junghenne,0,0,0,1,0
+2,Mastpoulet,0,0,0,1,0
+pre,pre_storage,0,0,0,0,10
+post,post_storage,0,0,0,0,100
+dist,distance,0,0,0,0,10
