@@ -1,0 +1,164 @@
+import dash
+from dash import html
+import pandas as pd
+import numpy as np
+import dash_functions_and_callbacks as dfc
+
+"""
+dash.register_page(__name__)
+
+layout = html.Div([
+    html.H1('This is our Uncertainties page'),
+    html.Div('This is our Uncertainties content.'),
+])
+"""
+# define path to animal and environmental config
+default_animal_config_path = "default_configs/default_animal_config.xlsx"
+default_environmental_config_path = "default_configs/default_environmental_config.xlsx"
+
+# define path to farm files folder
+farm_files_path = "farm files/"
+
+
+# Define the sample_size variable
+sample_size = 10  # You can adjust this value as needed
+
+
+# Function to generate samples from a lognormal distribution
+def generate_lognormal_samples(mean, stdev, sample_size):
+    if mean == 0:
+        return np.zeros(sample_size)
+    sigma = np.sqrt(np.log(1 + (stdev / mean) ** 2))
+    mu = np.log(mean) - 0.5 * sigma ** 2
+    samples = np.random.lognormal(mean=mu, sigma=sigma, size=sample_size)
+    return samples
+
+
+def substitute_env_config_values(samples_df, n):
+    """
+    Substitute values in the default environmental configuration with values from a sample row.
+
+    :param samples_df: The generated samples dataframe.
+    :param n: Index of the row in samples_df to use for substitution.
+    :return: A new dataframe with substituted values.
+    """
+    # Create a copy of the default configuration to prevent in-place modification
+    changed_config = env_config.copy()
+
+    # Iterate over each parameter in the default config
+    for index, row in changed_config.iterrows():
+        # If stdev is not 0 and not NaN
+        if row['stdev'] != 0 and not pd.isna(row['stdev']):
+            # Substitute the value in the copied dataframe with value from the sample
+            param_name = row['name']
+            changed_config.at[index, 'value'] = samples_df.at[n, param_name]
+
+    return changed_config
+
+
+def substitute_animal_config_values(samples_df, n):
+    """
+    Substitute values in the default animal configuration dataframe with values from a sample row based on the given index.
+
+    :param samples_df: The generated animal samples dataframe.
+    :param n: The row index to be used from the samples_df for substitution.
+    :return: A new dataframe with substituted values.
+    """
+    # Create a copy of the default configuration to prevent in-place modification
+    substituted_config = animal_config.copy()
+
+    # Iterate over each row in the default configuration
+    for index, row in substituted_config.iterrows():
+        animal_type = row['animal_type']
+        stable_type = row['stable_type']
+
+        # Filter the samples_df for rows corresponding to the current animal_type and stable_type
+        relevant_samples = samples_df[
+            (samples_df['animal_type'] == animal_type) & (samples_df['stable_type'] == stable_type)]
+
+        # Select the n-th row from the filtered samples
+        sample_row = relevant_samples.iloc[n]
+
+        print(f"Substituting values for animal_type: {animal_type}, stable_type: {stable_type}")
+        print(f"Original row: {row.values}")
+        print(f"Sample row: {sample_row.values}")
+
+        # Substitute values in the current row based on the identified sample_row
+        for col in [c for c in substituted_config.columns if c not in ['animal_type', 'stable_type']]:
+            sample_col_name = f"{animal_type}_{stable_type}_{col}"
+
+            assert sample_col_name in sample_row, f"Column {sample_col_name} not found in sample_row"
+
+            substituted_config.at[index, col] = sample_row[sample_col_name]
+            print(f"Substituted value for {col}: {substituted_config.at[index, col]}")
+        print(f"After substitution: {substituted_config.iloc[index].values}")
+
+    return substituted_config
+
+
+
+if __name__ == "__main__":
+
+    # Read the configuration files
+    animal_config = dfc.read_file_to_dataframe(default_animal_config_path)
+    env_config = dfc.read_file_to_dataframe(default_environmental_config_path)
+
+    # Identify parameters with non-zero standard deviation in both configs
+    stdev_cols_animal = [col for col in animal_config.columns if "stdev" in col]
+    value_cols_animal = [col.replace("stdev_", "") for col in stdev_cols_animal]
+    animal_parameters_to_sample = animal_config[animal_config[stdev_cols_animal].sum(axis=1) != 0]
+    env_parameters_to_sample = env_config[env_config['stdev'] != 0]
+
+
+    # Create a list to store rows of the new DataFrame
+    all_samples = []
+
+    # Iterate over each row in animal_config
+    for index, row in animal_config.iterrows():
+        # For each set of samples
+        for _ in range(sample_size):
+            sample_data = {
+                'animal_type': row['animal_type'],
+                'stable_type': row['stable_type']
+            }
+            # For each stdev and value column pair, generate a sample and add it to the sample_data dictionary
+            for stdev_col, value_col in zip(stdev_cols_animal, value_cols_animal):
+                sample_data[value_col] = generate_lognormal_samples(row[value_col], row[stdev_col], 1)[0]
+            # Add the sample_data dictionary to the all_samples list
+            all_samples.append(sample_data)
+
+    # Generate samples for environmental parameters
+    env_samples = {}
+    for _, row in env_parameters_to_sample.iterrows():
+        param_name = row['name']
+        samples = generate_lognormal_samples(row['value'], row['stdev'], sample_size)
+        env_samples[param_name] = samples
+
+    # Convert the samples dictionaries to DataFrames
+    df_env_samples = pd.DataFrame(env_samples)
+    df_animal_samples = pd.DataFrame(all_samples)
+
+    # Save the samples to Excel files
+    df_animal_samples.to_excel("Monte carlo simulation/saved_animal_samples.xlsx", index=False)
+    df_env_samples.to_excel("Monte carlo simulation/saved_env_samples.xlsx", index=False)
+
+
+
+
+
+    for n in range(sample_size):
+        new_config_env = substitute_env_config_values(df_env_samples, n)
+        #new_config_env.to_excel(f"Monte carlo simulation/new_env_config_test{n}.xlsx", index=False)
+        new_config_animal = substitute_animal_config_values(df_animal_samples, n)
+        new_config_animal.to_excel(f"Monte carlo simulation/new_animal_config_test{n}.xlsx", index=False)
+
+
+
+
+
+
+
+
+
+
+

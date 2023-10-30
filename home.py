@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.DEBUG,
                     filename='app.log',  # This will log to a file named app.log. Remove this to log to console.
                     filemode='w')  # This means the log file will be overwritten each time the app is started. Use 'a' to append.
 
-# Style sheet used: , external_stylesheets=[dbc.themes.MATERIA]
+
 # Create a Dash app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], use_pages=True)
 
@@ -40,15 +40,14 @@ page_paths = {
     "uncertainty-button": "/uncertainties",
     "sensitivity-analysis-button": "/sensitivity"
 }
-
+#########################################################################
+"""
+If the default config files are not loading, please enter the correct path in the following 2 lines of code
+"""
 # path to the default config files
 default_animal_config_path = "default_configs/default_animal_config.xlsx"
 default_environmental_config_path = "default_configs/default_environmental_config.xlsx"
-
-# Read the default configs
-default_animal_config = pd.read_excel(default_animal_config_path).to_json(date_format='iso', orient='records')
-default_environmental_config = pd.read_excel(default_environmental_config_path).to_json(date_format='iso', orient='records')
-
+###########################################################################
 
 
 # Start the main app
@@ -84,9 +83,7 @@ if __name__ == "__main__":
         dash.page_container,
         html.Div(id="output-config-upload"),
         dcc.Store(id='config-paths', data={"environmental_config": default_environmental_config_path,
-                                                 "animal_config": default_animal_config_path}),
-        dcc.Store(id='animal-config-store', data=default_animal_config),
-        dcc.Store(id='environmental-config-store', data=default_environmental_config),
+                                           "animal_config": default_animal_config_path}),
     ])
 
 
@@ -149,50 +146,6 @@ if __name__ == "__main__":
             # Return a message to the user indicating where the file was saved
             return saved_file_paths_dict
         return dash.no_update  # if no data, return without updating
-
-
-
-    # Connect the dcc.Upload component's contents output to the input of two callback functions
-    @app.callback(
-        Output('animal-config-store', 'data'),
-        Input('upload-config', 'contents'),
-        State('upload-config', 'filename'),
-        State('animal-config-store', 'data'),
-        prevent_initial_callbacks=True
-    )
-    def store_animal_config_data(list_of_contents, list_of_names, initial_data):
-        # Check the file name of the uploaded file
-        if list_of_contents is not None:
-            for contents, file_name in zip(list_of_contents, list_of_names):
-
-                # If the file name is 'animal_config.xlsx', parse the file content to a dataframe, then store it in config store
-                if file_name == 'animal_config.xlsx':
-                    return dfc.store_contents(contents, file_name)
-
-        # Otherwise, return initial data (default config)
-        return initial_data
-
-
-    @app.callback(
-        Output('environmental-config-store', 'data'),
-        Input('upload-config', 'contents'),
-        State('upload-config', 'filename'),
-        State('environmental-config-store', 'data'),
-        prevent_initial_callbacks=True
-    )
-    def store_environmental_config_data(list_of_contents, list_of_names, initial_data):
-        # Check the file name of the uploaded file
-        if list_of_contents is not None:
-            for contents, file_name in zip(list_of_contents, list_of_names):
-
-                # If the file name is 'environmental_config.xlsx', parse the file content to a dataframe, then store it in config store
-                if file_name == 'environmental_config.xlsx':
-                    return dfc.store_contents(contents, file_name)
-
-        # Otherwise, return initial data (default config)
-        return initial_data
-
-
 
 
     # Start the main app
