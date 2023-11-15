@@ -29,6 +29,8 @@ Since we only want this to calculate emissions, we only need carbon from theoret
 Other carbon would not be emitted as methane anyways.
 
 """
+
+
 def total_carbon(methane_pot, env_config):
     """
     :param methane_pot: methane potential in m3 methane
@@ -143,8 +145,10 @@ Caluclations for 1 farm file!
 
 # list of all results from single farm calculations
 results_single_farm = ["manure_solid", "manure_liquid", "manure_straw", "methane_solid", "methane_liquid",
-                       "methane_straw", "methane_tot", "ch4_emissions", "nh3_emissions", "n2o_emissions", "n_tot", "n_tot_pre_storage",
-                       "transport_emissions", "sum_post_storage_time", "c_tot", "c_tot_pre_storage", "c_tot_solid", "c_tot_liquid", "c_tot_straw"]
+                       "methane_straw", "methane_tot", "ch4_emissions", "nh3_emissions", "n2o_emissions", "n_tot",
+                       "n_tot_pre_storage",
+                       "transport_emissions", "sum_post_storage_time", "c_tot", "c_tot_pre_storage", "c_tot_solid",
+                       "c_tot_liquid", "c_tot_straw"]
 
 
 def get_animal_data(animal, farm_data):
@@ -154,11 +158,10 @@ def get_animal_data(animal, farm_data):
     :param farm_data: the input data from the user
     :return: Return a dictionary with relevant animal data
     """
-    animal_data_dict = {}
-    animal_data_dict['days_outside'] = dfc.find_value_farm(animal, "days-outside", farm_data)
-    animal_data_dict['hours_outside'] = dfc.find_value_farm(animal, "hours-outside", farm_data)
-    animal_data_dict['manure_type'] = dfc.find_value_farm(animal, "manure-type", farm_data)
-    animal_data_dict['num_animal'] = dfc.find_value_farm(animal, "num-animals", farm_data)
+    animal_data_dict = {'days_outside': dfc.find_value_farm(animal, "days-outside", farm_data),
+                        'hours_outside': dfc.find_value_farm(animal, "hours-outside", farm_data),
+                        'manure_type': dfc.find_value_farm(animal, "manure-type", farm_data),
+                        'num_animal': dfc.find_value_farm(animal, "num-animals", farm_data)}
 
     # manure collection factor based on time spent outside of stable
     animal_data_dict['manure_collection'] = manure_collection_rate(animal_data_dict['hours_outside'],
@@ -174,10 +177,11 @@ def get_methane_potentials(animal, animal_config):
     :param animal_config: The configuration containing animal data.
     :return: A dictionary containing methane potentials for liquid, solid, and straw.
     """
-    methane_pot_dict = {}
-    methane_pot_dict['methane_pot_liquid'] = dfc.find_value_animal_config_1_variable(animal, "methane_potential_liquid", animal_config)
-    methane_pot_dict['methane_pot_solid'] = dfc.find_value_animal_config_1_variable(animal, "methane_potential_solid", animal_config)
-    methane_pot_dict['methane_pot_straw'] = dfc.find_value_animal_config_1_variable(animal, "methane_potential_straw", animal_config)
+    methane_pot_dict = {
+        'methane_pot_liquid': dfc.find_value_animal_config_1_variable(animal, "methane_potential_liquid",
+                                                                      animal_config),
+        'methane_pot_solid': dfc.find_value_animal_config_1_variable(animal, "methane_potential_solid", animal_config),
+        'methane_pot_straw': dfc.find_value_animal_config_1_variable(animal, "methane_potential_straw", animal_config)}
     return methane_pot_dict
 
 
@@ -190,24 +194,27 @@ def get_dw_odw(animal, animal_config):
     :return: A dictionary containing dw, odw and vs of manure and straw.
     """
     # get dry weight and organic dry weight for manure, and vs for straw
-    dw_odw_dict = {}
-    dw_odw_dict['dw_liquid'] = dfc.find_value_animal_config_1_variable(animal, "dry_weight_liquid", animal_config)
-    dw_odw_dict['odw_liquid'] = dfc.find_value_animal_config_1_variable(animal, "organic_dry_weight_liquid", animal_config)
-    dw_odw_dict['dw_solid'] = dfc.find_value_animal_config_1_variable(animal, "dry_weight_solid", animal_config)
-    dw_odw_dict['odw_solid'] = dfc.find_value_animal_config_1_variable(animal, "dry_weight_solid", animal_config)
-    dw_odw_dict['vs_straw'] = dfc.find_value_animal_config_1_variable(animal, "vs_content_straw", animal_config)
+    dw_odw_dict = {'dw_liquid': dfc.find_value_animal_config_1_variable(animal, "dry_weight_liquid", animal_config),
+                   'odw_liquid': dfc.find_value_animal_config_1_variable(animal, "organic_dry_weight_liquid",
+                                                                         animal_config),
+                   'dw_solid': dfc.find_value_animal_config_1_variable(animal, "dry_weight_solid", animal_config),
+                   'odw_solid': dfc.find_value_animal_config_1_variable(animal, "dry_weight_solid", animal_config),
+                   'vs_straw': dfc.find_value_animal_config_1_variable(animal, "vs_content_straw", animal_config)}
 
     return dw_odw_dict
 
 
 def calc_farm_methane_pot(manure_methane_dict, dw_odw_dict, methane_pot_dict):
     # calculate methane potential of the farm
-    manure_methane_dict['methane_solid'] = manure_methane_dict['manure_solid'] * dw_odw_dict['dw_solid'] * dw_odw_dict['odw_solid'] * \
+    manure_methane_dict['methane_solid'] = manure_methane_dict['manure_solid'] * dw_odw_dict['dw_solid'] * dw_odw_dict[
+        'odw_solid'] * \
                                            methane_pot_dict['methane_pot_solid']
-    manure_methane_dict['methane_liquid'] = manure_methane_dict['manure_liquid'] * dw_odw_dict['dw_liquid'] * dw_odw_dict['odw_liquid'] * \
+    manure_methane_dict['methane_liquid'] = manure_methane_dict['manure_liquid'] * dw_odw_dict['dw_liquid'] * \
+                                            dw_odw_dict['odw_liquid'] * \
                                             methane_pot_dict['methane_pot_liquid']
-    manure_methane_dict['methane_straw'] = manure_methane_dict['manure_straw'] * dw_odw_dict['vs_straw'] * methane_pot_dict[
-        'methane_pot_straw']
+    manure_methane_dict['methane_straw'] = manure_methane_dict['manure_straw'] * dw_odw_dict['vs_straw'] * \
+                                           methane_pot_dict[
+                                               'methane_pot_straw']
     return manure_methane_dict
 
 
@@ -239,13 +246,17 @@ def calc_manure_and_methane_pig_poultry(animal, animal_data_dict, animal_config,
     manure_pot_liquid = dfc.find_value_animal_config_1_variable(animal, "manure_liquid", animal_config)
     manure_pot_solid = dfc.find_value_animal_config_1_variable(animal, "manure_solid", animal_config)
     manure_pot_straw = dfc.find_value_animal_config_1_variable(animal, "manure_straw", animal_config)
-    manure_methane_dict['manure_solid'] = manure_pot_solid * animal_data_dict['num_animal'] * animal_data_dict['manure_collection']
-    manure_methane_dict['manure_liquid'] = manure_pot_liquid * animal_data_dict['num_animal'] * animal_data_dict['manure_collection']
-    manure_methane_dict['manure_straw'] = manure_pot_straw * animal_data_dict['num_animal'] * animal_data_dict['manure_collection']
+    manure_methane_dict['manure_solid'] = manure_pot_solid * animal_data_dict['num_animal'] * animal_data_dict[
+        'manure_collection']
+    manure_methane_dict['manure_liquid'] = manure_pot_liquid * animal_data_dict['num_animal'] * animal_data_dict[
+        'manure_collection']
+    manure_methane_dict['manure_straw'] = manure_pot_straw * animal_data_dict['num_animal'] * animal_data_dict[
+        'manure_collection']
 
     # calculate methane potential of the farm
     manure_methane_dict = calc_farm_methane_pot(manure_methane_dict, dw_odw_dict, methane_pot_dict)
     return manure_methane_dict
+
 
 def add_dict_to_results(results_df, new_dict):
     for key, value in new_dict.items():
@@ -256,41 +267,42 @@ def store_dict_in_results(results_df, new_dict):
     for key, value in new_dict.items():
         dfc.store_value_in_results_df(results_df, key, "value", value)
 
+
 def get_additional_data(farm_data):
     """
     Gets additional data from farm data
     :param farm_data:
     :return:
     """
-    additional_data_dict = {}
-    additional_data_dict['pre_storage'] = dfc.find_value_farm("pre_storage", "additional-data", farm_data)
-    additional_data_dict['post_storage'] = dfc.find_value_farm("post_storage", "additional-data", farm_data)
-    additional_data_dict['distance'] = dfc.find_value_farm("distance", "additional-data", farm_data)
-    return  additional_data_dict
+    additional_data_dict = {'pre_storage': dfc.find_value_farm("pre_storage", "additional-data", farm_data),
+                            'post_storage': dfc.find_value_farm("post_storage", "additional-data", farm_data),
+                            'distance': dfc.find_value_farm("distance", "additional-data", farm_data)}
+    return additional_data_dict
 
 
 def calc_tot_methane(results_df):
     """get methane values from df and divide by 1000 to convert from NL to m3"""
-    methane_dict = {}
-    methane_dict['methane_solid'] = dfc.find_value_in_results_df(results_df, "methane_solid") / 1000
-    methane_dict['methane_liquid'] = dfc.find_value_in_results_df(results_df, "methane_liquid") / 1000
-    methane_dict['methane_straw'] = dfc.find_value_in_results_df(results_df, "methane_straw") / 1000
+    methane_dict = {'methane_solid': dfc.find_value_in_results_df(results_df, "methane_solid") / 1000,
+                    'methane_liquid': dfc.find_value_in_results_df(results_df, "methane_liquid") / 1000,
+                    'methane_straw': dfc.find_value_in_results_df(results_df, "methane_straw") / 1000}
 
-    methane_dict['methane_tot'] = methane_dict['methane_solid'] + methane_dict['methane_liquid'] + methane_dict['methane_straw']
+    methane_dict['methane_tot'] = methane_dict['methane_solid'] + methane_dict['methane_liquid'] + methane_dict[
+        'methane_straw']
     return methane_dict
+
 
 def methane_pre_storage_emissions(carbon_emissions_dict, methane_dict, env_config, additional_data_dict):
     # methane pre-storage emissions by source (liquid, solid, straw)
     carbon_emissions_dict['c_tot_solid'] = total_carbon(methane_dict['methane_solid'], env_config)
     carbon_emissions_dict['c_tot_liquid'] = total_carbon(methane_dict['methane_liquid'], env_config)
     carbon_emissions_dict['c_tot_straw'] = total_carbon(methane_dict['methane_straw'], env_config)
-    carbon_emissions_dict['ch4_emissions_solid'] = storage.emissions_manure_ch4(additional_data_dict['pre_storage'],
+    carbon_emissions_dict['methane_emissions_solid'] = storage.emissions_manure_ch4(additional_data_dict['pre_storage'],
                                                                                 carbon_emissions_dict['c_tot_solid'],
                                                                                 env_config)
-    carbon_emissions_dict['ch4_emissions_liquid'] = storage.emissions_manure_ch4(additional_data_dict['pre_storage'],
+    carbon_emissions_dict['methane_emissions_liquid'] = storage.emissions_manure_ch4(additional_data_dict['pre_storage'],
                                                                                  carbon_emissions_dict['c_tot_liquid'],
                                                                                  env_config)
-    carbon_emissions_dict['ch4_emissions_straw'] = storage.emissions_manure_ch4(additional_data_dict['pre_storage'],
+    carbon_emissions_dict['methane_emissions_straw'] = storage.emissions_manure_ch4(additional_data_dict['pre_storage'],
                                                                                 carbon_emissions_dict['c_tot_straw'],
                                                                                 env_config)
 
@@ -299,7 +311,7 @@ def methane_pre_storage_emissions(carbon_emissions_dict, methane_dict, env_confi
 
 def convert_ch4_emissions_to_volume(carbon_emissions_dict, env_config):
     """convert the emissions back to volume in m3"""
-    list_names = ['ch4_emissions_solid', 'ch4_emissions_liquid', 'ch4_emissions_straw']
+    list_names = ['methane_emissions_solid', 'methane_emissions_liquid', 'methane_emissions_straw']
     for name in list_names:
         new_key = name + '_volume'
         carbon_emissions_dict[new_key] = carbon_to_methane_volume(carbon_emissions_dict[name], env_config)
@@ -309,27 +321,36 @@ def convert_ch4_emissions_to_volume(carbon_emissions_dict, env_config):
 
 def calc_pre_storage_emissions_carbon(methane_dict, env_config, additional_data_dict):
     # pre storage emissions ch4 in kg C
-    carbon_emissions_dict = {}
-    carbon_emissions_dict['c_tot'] = total_carbon(methane_dict['methane_tot'], env_config)
-    carbon_emissions_dict['ch4_emissions_pre_storage'] = storage.emissions_manure_ch4(additional_data_dict['pre_storage'], carbon_emissions_dict['c_tot'], env_config)
-    carbon_emissions_dict['c_tot_pre_storage'] = carbon_emissions_dict['c_tot'] - carbon_emissions_dict['ch4_emissions_pre_storage']
+    carbon_emissions_dict = {'c_tot': total_carbon(methane_dict['methane_tot'], env_config)}
+    carbon_emissions_dict['methane_emissions_pre_storage'] = storage.emissions_manure_ch4(
+        additional_data_dict['pre_storage'], carbon_emissions_dict['c_tot'], env_config)
+    carbon_emissions_dict['c_tot_pre_storage'] = carbon_emissions_dict['c_tot'] - carbon_emissions_dict[
+        'methane_emissions_pre_storage']
 
     # after subtracting the CH4-C emissions from c_tot, turn them into kg CH4
-    carbon_emissions_dict['ch4_emissions_pre_storage'] = carbon_to_methane(env_config, carbon_emissions_dict['ch4_emissions_pre_storage'])
+    carbon_emissions_dict['methane_emissions_pre_storage'] = carbon_to_methane(env_config, carbon_emissions_dict[
+        'methane_emissions_pre_storage'])
 
     # methane pre-storage emissions by source (liquid, solid, straw)
-    carbon_emissions_dict = methane_pre_storage_emissions(carbon_emissions_dict, methane_dict, env_config, additional_data_dict)
+    carbon_emissions_dict = methane_pre_storage_emissions(carbon_emissions_dict, methane_dict, env_config,
+                                                          additional_data_dict)
 
     """convert the emissions back to volume in m3"""
     carbon_emissions_dict = convert_ch4_emissions_to_volume(carbon_emissions_dict, env_config)
 
     """calculate methane_pot for total, solid, liquid and straw separately after pre-storage in m3"""
-    carbon_emissions_dict['methane_solid_pre_storage'] = methane_dict['methane_solid'] - carbon_emissions_dict['ch4_emissions_solid_volume']
-    carbon_emissions_dict['methane_straw_pre_storage'] = methane_dict['methane_straw'] - carbon_emissions_dict['ch4_emissions_straw_volume']
-    carbon_emissions_dict['methane_liquid_pre_storage'] = methane_dict['methane_liquid'] - carbon_emissions_dict['ch4_emissions_liquid_volume']
-    carbon_emissions_dict['methane_tot_pre_storage'] = carbon_emissions_dict['methane_solid_pre_storage'] + carbon_emissions_dict['methane_liquid_pre_storage'] + carbon_emissions_dict['methane_straw_pre_storage']
+    carbon_emissions_dict['methane_solid_pre_storage'] = methane_dict['methane_solid'] - carbon_emissions_dict[
+        'methane_emissions_solid_volume']
+    carbon_emissions_dict['methane_straw_pre_storage'] = methane_dict['methane_straw'] - carbon_emissions_dict[
+        'methane_emissions_straw_volume']
+    carbon_emissions_dict['methane_liquid_pre_storage'] = methane_dict['methane_liquid'] - carbon_emissions_dict[
+        'methane_emissions_liquid_volume']
+    carbon_emissions_dict['methane_tot_pre_storage'] = carbon_emissions_dict['methane_solid_pre_storage'] + \
+                                                       carbon_emissions_dict['methane_liquid_pre_storage'] + \
+                                                       carbon_emissions_dict['methane_straw_pre_storage']
 
     return carbon_emissions_dict
+
 
 def calc_pre_storage_emissions_nitrogen(nitrogen_emissions_dict, env_config, additional_data_dict):
     """
@@ -357,9 +378,12 @@ def calc_pre_storage_emissions_nitrogen(nitrogen_emissions_dict, env_config, add
 
 
 def add_total_emissions_pre_storage(results_df, carbon_emissions_dict, nitrogen_emissions_dict):
-    dfc.add_value_to_results_df(results_df, "ch4_emissions", "value", carbon_emissions_dict['ch4_emissions_pre_storage'])
-    dfc.add_value_to_results_df(results_df, "nh3_emissions", "value", nitrogen_emissions_dict['nh3_emissions_pre_storage'])
-    dfc.add_value_to_results_df(results_df, "n2o_emissions", "value", nitrogen_emissions_dict['n2o_emissions_pre_storage'])
+    dfc.add_value_to_results_df(results_df, "methane_emissions", "value",
+                                carbon_emissions_dict['methane_emissions_pre_storage'])
+    dfc.add_value_to_results_df(results_df, "nh3_emissions", "value",
+                                nitrogen_emissions_dict['nh3_emissions_pre_storage'])
+    dfc.add_value_to_results_df(results_df, "n2o_emissions", "value",
+                                nitrogen_emissions_dict['n2o_emissions_pre_storage'])
 
 
 def get_initial_data_field_application(input_df, ad):
@@ -376,18 +400,19 @@ def get_initial_data_field_application(input_df, ad):
 def calc_post_storage_emissions(post_storage_time, c_tot, n_tot, env_config, ad):
     emissions_dict = {}
     if ad:  # check if ad is True, then calculate for digestate
-        emissions_dict['ch4_emissions_storage'] = storage.emissions_digestate_ch4(post_storage_time, c_tot, env_config)
+        emissions_dict['methane_emissions_storage'] = storage.emissions_digestate_ch4(post_storage_time, c_tot, env_config)
         emissions_dict['nh3_emissions_storage'] = storage.emissions_digestate_nh3(post_storage_time, n_tot, env_config)
 
-    else:   # if ad is False, calculate for manure
-        emissions_dict['ch4_emissions_storage'] = storage.emissions_manure_ch4(post_storage_time, c_tot, env_config)
+    else:  # if ad is False, calculate for manure
+        emissions_dict['methane_emissions_storage'] = storage.emissions_manure_ch4(post_storage_time, c_tot, env_config)
         emissions_dict['nh3_emissions_storage'] = storage.emissions_manure_nh3(post_storage_time, n_tot, env_config)
 
     # calculate new N after nh3 emissions
     n_tot_new = n_tot - emissions_dict['nh3_emissions_storage']
     # use new value of N to calculate N2O emissions
     if ad:
-        emissions_dict['n2o_emissions_storage'] = storage.emissions_digestate_n2o(post_storage_time, n_tot_new, env_config)
+        emissions_dict['n2o_emissions_storage'] = storage.emissions_digestate_n2o(post_storage_time, n_tot_new,
+                                                                                  env_config)
 
     else:
         emissions_dict['n2o_emissions_storage'] = storage.emissions_manure_n2o(post_storage_time, n_tot_new, env_config)
@@ -399,10 +424,10 @@ def store_post_storage_and_field_emissions(input_df, emissions_dict):
     for key, value in emissions_dict.items():
         suffix = key.rpartition('_')[2]
         name = key.rpartition('_')[0]
-        if suffix == 'storage':     # if it's storage emissions, store it as post_storage
+        if suffix == 'storage':  # if it's storage emissions, store it as post_storage
             dfc.store_value_in_results_df(input_df, f"{name}_post_storage", "value", value)
 
-        else :  # if it's field emissions, store it as such
+        else:  # if it's field emissions, store it as such
             dfc.store_value_in_results_df(input_df, key, "value", value)
 
 
@@ -428,26 +453,37 @@ def convert_elemental_to_molecule_weight(input_dict, env_config):
     return input_dict
 
 
-def get_initial_data_env_impact(input_df):
-    """get necessary data points from input df"""
-    list_names = ["ch4_emissions_pre_storage", "ch4_emissions_post_storage", "methane_loss_ad", "ch4_loss_upgrading",
-                  "ch4_emissions", "n2o_emissions_pre_storage", "n2o_emissions_post_storage", "n2o_emissions_field",
-                  "n2o_emissions", 'nh3_emissions', "electricity_demand_ad", "electricity_demand_biogas_upgrading",
-                  "electricity_demand_tot", "electricity_generated_tot", "heat_generated_tot", 'co2_transport']
+def get_initial_data(input_df, list_data):
     initial_data_dict = {}
-    for name in list_names:
+    for name in list_data:
         initial_data_dict[name] = dfc.find_value_in_results_df(input_df, name)
 
     return initial_data_dict
 
-def calc_gwp_impact(env_impact_dict, initial_data_dict, env_config):
 
+def get_initial_data_env_impact(input_df):
+    """get necessary data points from input df"""
+    list_names = ["methane_emissions_pre_storage", "methane_emissions_post_storage", "methane_emissions_ad",
+                  "methane_emissions_biogas_upgrading",
+                  "methane_emissions", "n2o_emissions_pre_storage", "n2o_emissions_post_storage", "n2o_emissions_field",
+                  "n2o_emissions", 'nh3_emissions', "electricity_demand_ad", "electricity_demand_biogas_upgrading",
+                  "electricity_demand_tot", "electricity_generated_tot", "heat_generated_tot", 'co2_transport']
+    initial_data_dict = get_initial_data(input_df, list_names)
+
+    return initial_data_dict
+
+
+def calc_gwp_impact(initial_data_dict, env_config):
+    env_impact_dict = {}
     for key, value in initial_data_dict.items():
         if 'ch4' in key or 'methane' in key:
             # remove "_emissions" from the key
             new_key = key.replace('_emissions', '')
-            if new_key == "ch4":
+            if new_key == "methane":
                 new_key = "methane_tot"
+            if 'ch4' in new_key:
+                new_key = new_key.replace('ch4', 'methane')
+
             env_impact_dict[f'co2_{new_key}'] = envi.co2_methane(env_config, value)
 
         elif 'n2o' in key:
@@ -469,16 +505,22 @@ def calc_gwp_impact(env_impact_dict, initial_data_dict, env_config):
     return env_impact_dict
 
 
+def steam_initial_data(input_df):
+    list_data = ["manure_solid", "manure_straw", "methane_solid_pre_storage", "methane_straw_pre_storage",
+                 "methane_liquid_pre_storage"]
+    steam_initial_data_dict = get_initial_data(input_df, list_data)
+
+    return steam_initial_data_dict
+
 
 def calc_single_farm(results_df, farm_data, animal_config, env_config):
-
-    nitrogen_emissions_dict = {}
-    nitrogen_emissions_dict['n_tot'] = 0
+    nitrogen_emissions_dict = {'n_tot': 0}
 
     manure_tot = 0
 
     # get a list of all animal types used from the config file (Attention: Right now it still uses animal_type_ger until Data_input.py is updated!!
     animal_types = dfc.get_animal_types(animal_config)
+    logging.debug(f'list of animal types: {animal_types}')
     for animal in animal_types:
 
         # get values from the farm file
@@ -490,7 +532,7 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
         logging.debug(f"Animal_data_dict for {animal}: {animal_data_dict}")
 
         # get values from animal_config
-        #check if there are any animals in the first place
+        # check if there are any animals in the first place
         if animal_data_dict['num_animal'] > 0:
 
             # get methane potential
@@ -505,28 +547,29 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
 
             # get Nitrogen
             n_tot_per_animal = dfc.find_value_animal_config_1_variable(animal, "nitrogen_content", animal_config)
-            nitrogen_emissions_dict['n_tot'] += n_tot_per_animal * animal_data_dict['num_animal'] * animal_data_dict['manure_collection']
+            nitrogen_emissions_dict['n_tot'] += n_tot_per_animal * animal_data_dict['num_animal'] * animal_data_dict[
+                'manure_collection']
 
-
-            #check if manure type exists, if it doesn't it's probably a Pig or Poultry animal with a wrong input.
+            # check if manure type exists, if it doesn't it's probably a Pig or Poultry animal with a wrong input.
             if dfc.find_value_animal_config(animal, animal_data_dict['manure_type'], "animal_type", animal_config):
 
-                #get manure total
-                manure_methane_dict = calc_manure_and_methane_cattle(animal, animal_data_dict, animal_config, methane_pot_dict, dw_odw_dict)
+                # get manure total
+                manure_methane_dict = calc_manure_and_methane_cattle(animal, animal_data_dict, animal_config,
+                                                                     methane_pot_dict, dw_odw_dict)
 
-                manure_tot += (manure_methane_dict['manure_solid'] + manure_methane_dict['manure_liquid'] + manure_methane_dict['manure_straw'])
+                manure_tot += (manure_methane_dict['manure_solid'] + manure_methane_dict['manure_liquid'] +
+                               manure_methane_dict['manure_straw'])
 
                 logging.debug(f'manure_methane_dict for {animal}: {manure_methane_dict}')
 
                 # add up methane potential and total manure
                 add_dict_to_results(results_df, manure_methane_dict)
 
-
             # if the manure type doesn't exist for that animal, assume it's pig or poultry, which only have 1 manure type each and calculate with that
             else:
-                #get manure total
+                # get manure total
                 manure_methane_dict = calc_manure_and_methane_pig_poultry(animal, animal_data_dict, animal_config,
-                                                                     methane_pot_dict, dw_odw_dict)
+                                                                          methane_pot_dict, dw_odw_dict)
 
                 manure_tot += (manure_methane_dict['manure_solid'] + manure_methane_dict['manure_liquid'] +
                                manure_methane_dict['manure_straw'])
@@ -540,10 +583,8 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
         else:
             continue
 
-
-    #get additional data (storage durations and transport distance)
+    # get additional data (storage durations and transport distance)
     additional_data_dict = get_additional_data(farm_data)
-
 
     """get methane values from df and divide by 1000 to convert from NL to m3"""
     methane_dict = calc_tot_methane(results_df)
@@ -555,7 +596,6 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
     dfc.add_value_to_results_df(results_df, "methane_tot", "value", methane_dict['methane_tot'])
     dfc.add_value_to_results_df(results_df, "sum_post_storage_time", "value", sum_post_storage_time)
 
-
     # pre storage emissions ch4 in kg C
     carbon_emissions_dict = calc_pre_storage_emissions_carbon(methane_dict, env_config, additional_data_dict)
 
@@ -564,9 +604,10 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
     nh3 first, then subtract nh3 emissions from n_tot for n2o emissions
     emissions in kg N
     """
-    nitrogen_emissions_dict = calc_pre_storage_emissions_nitrogen(nitrogen_emissions_dict, env_config, additional_data_dict)
+    nitrogen_emissions_dict = calc_pre_storage_emissions_nitrogen(nitrogen_emissions_dict, env_config,
+                                                                  additional_data_dict)
 
-    #add emissions to results_df, note that all emissions are in CH4, NH3 or N2O!
+    # add emissions to results_df, note that all emissions are in CH4, NH3 or N2O!
     add_total_emissions_pre_storage(results_df, carbon_emissions_dict, nitrogen_emissions_dict)
 
     # Store nitrogen emissions
@@ -594,7 +635,6 @@ calculate manure, methane potential, pre-storage emissions and transportation co
 def calc_all_farms(list_farms, list_names, animal_config, env_config):
     results_df = dfc.create_dataframe_calc_empty()
 
-
     # do the calculations for all farms
     for farm, name in zip(list_farms, list_names):
         # get a dataframe from the uploaded farm file
@@ -613,7 +653,6 @@ def calc_all_farms(list_farms, list_names, animal_config, env_config):
 def calc_all_farms_new(list_farms, animal_config, env_config):
     results_df = dfc.create_dataframe_calc_empty()
 
-
     # do the calculations for all farms
     for farm in list_farms:
         # calculate single farm
@@ -625,9 +664,6 @@ def calc_all_farms_new(list_farms, animal_config, env_config):
     sum_post_storage_time = sum_post_storage_time / methane_tot
     dfc.store_value_in_results_df(results_df, "sum_post_storage_time", "value", sum_post_storage_time)
     return results_df
-
-
-
 
 
 """calculate the post storage - and field application emissions for any case"""
@@ -649,15 +685,17 @@ def post_storage_and_field_emissions(input_df, env_config, ad):
     emissions_dict, n_tot_new = calc_post_storage_emissions(post_storage_time, c_tot, n_tot, env_config, ad)
 
     """calculate new c and n values for field application emissions"""
-    c_tot_field = c_tot - emissions_dict['ch4_emissions_storage']
+    c_tot_field = c_tot - emissions_dict['methane_emissions_storage']
     n_tot_field = n_tot_new - emissions_dict['n2o_emissions_storage']
 
     """calculate field application emissions"""
     if ad:
-        emissions_dict['nh3_emissions_field'], emissions_dict['n2o_emissions_field'] = field.n_emissions_digestate(env_config, n_tot_field)
+        emissions_dict['nh3_emissions_field'], emissions_dict['n2o_emissions_field'] = field.n_emissions_digestate(
+            env_config, n_tot_field)
 
     else:
-        emissions_dict['nh3_emissions_field'], emissions_dict['n2o_emissions_field'] = field.n_emissions_manure(env_config, n_tot_field)
+        emissions_dict['nh3_emissions_field'], emissions_dict['n2o_emissions_field'] = field.n_emissions_manure(
+            env_config, n_tot_field)
 
     """before storing, convert all emissions from kg C/N to kg CH4/NH3/N2O"""
     emissions_dict = convert_elemental_to_molecule_weight(emissions_dict, env_config)
@@ -672,7 +710,7 @@ def post_storage_and_field_emissions(input_df, env_config, ad):
 
     """make sure pre-storage emissions and transport are 0 for the no treatment pathway"""
     if not ad:
-        dfc.store_value_in_results_df(input_df, "ch4_emissions_pre_storage", "value", 0)
+        dfc.store_value_in_results_df(input_df, "methane_emissions_pre_storage", "value", 0)
         dfc.store_value_in_results_df(input_df, "nh3_emissions_pre_storage", "value", 0)
         dfc.store_value_in_results_df(input_df, "n2o_emissions_pre_storage", "value", 0)
 
@@ -687,57 +725,53 @@ def calc_anaerobic_digestion(input_df, env_config):
     :param env_config:
     :return: emissions and biogas yield of AD process are stored in the input_df and returned
     """
+    """store data in log file for debugging"""
+    logging.debug(f"input dataframe in anaerobic digestion calculations: {input_df}")
+    # define new dictionary for values that are going to be stored later
 
     """ methane potential in m3 methane after pre-storage"""
     methane_pot = dfc.find_value_in_results_df(input_df, "methane_tot_pre_storage")
-
-    """store data in log file for debugging"""
-    logging.debug(f"input dataframe in anaerobic digestion calculations: {input_df}")
 
     """methane yield in m3 methane"""
     methane_yield = ad.calc_methane_yield(env_config, methane_pot)
 
     """ methane loss in m3 methane"""
-    methane_loss_ad = ad.calc_methane_loss(env_config, methane_yield)
+    ad_results_dict = {'methane_emissions_ad': ad.calc_methane_loss(env_config, methane_yield)}
 
     """effective methane yield after loss in m3 methane"""
-    methane_yield_eff = methane_yield - methane_loss_ad
+    ad_results_dict['methane_yield'] = methane_yield - ad_results_dict['methane_emissions_ad']
 
     """ methane pot left (for emissions) after ad in m3 methane"""
     effective_methane_after_ad = methane_pot - methane_yield
 
     """total carbon left in digestate after pre-storage and AD in kg C"""
-    c_tot = total_carbon(methane_pot, env_config)     # c_tot after pre-storage, calculated so that it's correct for steam-pretretment as well
-    methane_yield_mass = total_carbon(methane_yield, env_config)    # methane yield in kg C
-    c_tot_ad = c_tot - methane_yield_mass       # c_tot after ad in kg C
+    c_tot = total_carbon(methane_pot,
+                         env_config)  # c_tot after pre-storage, calculated so that it's correct for steam-pretretment as well
+    methane_yield_mass = total_carbon(methane_yield, env_config)  # methane yield in kg C
+    ad_results_dict['c_tot_ad'] = c_tot - methane_yield_mass  # c_tot after ad in kg C
 
-    """calculate biogas composition and co2 content"""
-    biogas, co2_content_biogas = ad.biogas_composition(env_config, methane_yield)
+    """calculate biogas composition and co2 content, after losses from AD"""
+    ad_results_dict['biogas'], ad_results_dict['co2_biogas'] = ad.biogas_composition(env_config,
+                                                                                     ad_results_dict['methane_yield'])
 
     """ calculate heat and electricity demand for ad"""
-    heat_demand_ad = ad.calc_heat_demand_ad(env_config, biogas)
-    electricity_demand_ad = ad.calc_electricity_demand_ad(env_config, biogas)
+    ad_results_dict['heat_demand_ad'] = ad.calc_heat_demand_ad(env_config, ad_results_dict['biogas'])
+    ad_results_dict['electricity_demand_ad'] = ad.calc_electricity_demand_ad(env_config, ad_results_dict['biogas'])
 
     """convert methane loss from m3 to kg CH4"""
-    methane_loss_ad = methane_volume_to_mass(env_config, methane_loss_ad)
+    ad_results_dict['methane_emissions_ad'] = methane_volume_to_mass(env_config,
+                                                                     ad_results_dict['methane_emissions_ad'])
 
     """store values in input df, to then return them"""
-    dfc.store_value_in_results_df(input_df, "methane_yield", "value", methane_yield_eff)
-
-    # set methane_yield as the methane that goes to chp. In case of biogas upgrading, this value will be changed later
-    dfc.store_value_in_results_df(input_df, "methane_to_chp", "value", methane_yield_eff)
-
-    dfc.store_value_in_results_df(input_df, "c_tot_ad", "value", c_tot_ad)
-    dfc.store_value_in_results_df(input_df, "biogas", "value", biogas)
-    dfc.store_value_in_results_df(input_df, "co2_biogas", "value", co2_content_biogas)
-    dfc.store_value_in_results_df(input_df, "heat_demand_ad", "value", heat_demand_ad)
-    dfc.store_value_in_results_df(input_df, "electricity_demand_ad", "value", electricity_demand_ad)
-    dfc.store_value_in_results_df(input_df, "methane_loss_ad", "value", methane_loss_ad)
+    store_dict_in_results(input_df, ad_results_dict)
 
     """add up emissions"""
-    dfc.add_value_to_results_df(input_df, "ch4_emissions", "value", methane_loss_ad)
-    dfc.add_value_to_results_df(input_df, "heat_demand_tot", "value", heat_demand_ad)
-    dfc.add_value_to_results_df(input_df, "electricity_demand_tot", "value", electricity_demand_ad)
+    dfc.add_value_to_results_df(input_df, "methane_emissions", "value", ad_results_dict['methane_emissions_ad'])
+    dfc.add_value_to_results_df(input_df, "heat_demand_tot", "value", ad_results_dict['heat_demand_ad'])
+    dfc.add_value_to_results_df(input_df, "electricity_demand_tot", "value", ad_results_dict['electricity_demand_ad'])
+
+    # set methane_yield as the methane that goes to chp. In case of biogas upgrading, this value will be changed later
+    dfc.store_value_in_results_df(input_df, "methane_to_chp", "value", ad_results_dict['methane_yield'])
     return input_df
 
 
@@ -766,6 +800,9 @@ def calc_biogas_upgrading(input_df, env_config):
     :param env_config:
     :return:
     """
+
+    # initiate dictionary for biogas upgrading results
+
     # get biogas value from input df
     biogas = dfc.find_value_in_results_df(input_df, "biogas")
 
@@ -773,47 +810,47 @@ def calc_biogas_upgrading(input_df, env_config):
     biogas_to_upgrading = bg.biogas_upgraded(env_config, biogas)
     biogas_to_chp = bg.biogas_chp(env_config, biogas)
 
-    ch4_loss_upgrading = bg.methane_loss_upgrading(env_config, bg.ch4_biogas(env_config, biogas_to_upgrading))
+    bg_results_dict = {'methane_emissions_biogas_upgrading': bg.methane_loss_upgrading(env_config,
+                                                                                       bg.ch4_biogas(env_config,
+                                                                                                     biogas_to_upgrading))}
 
     offgas_volume = bg.offgas_volume(env_config, biogas_to_upgrading)
     offgas_ch4 = bg.ch4_offgas(env_config, biogas_to_upgrading)
     offgas_co2 = bg.co2_offgas(env_config, biogas_to_upgrading)
 
     """subtract ch4 loss from total biomethane volume"""
-    biomethane_volume = bg.biomethane_volume(env_config, biogas_to_upgrading) - ch4_loss_upgrading
+    bg_results_dict['biomethane_volume'] = bg.biomethane_volume(env_config, biogas_to_upgrading) - bg_results_dict[
+        'methane_emissions_biogas_upgrading']
 
     """subtract methane losses from the biomethane yield!"""
-    biomethane_ch4 = bg.ch4_biomethane(env_config, biogas_to_upgrading) - ch4_loss_upgrading
+    bg_results_dict['biomethane_ch4'] = bg.ch4_biomethane(env_config, biogas_to_upgrading) - bg_results_dict[
+        'methane_emissions_biogas_upgrading']
     biomethane_co2 = bg.co2_biomethane(env_config, biogas_to_upgrading)
 
     """methane volume in the biogas that goes into the CHP"""
     methane_biogas_to_chp = bg.ch4_biogas(env_config, biogas_to_chp)
     # total methane to chp, offgas plus biogas directly
-    methane_to_chp = methane_biogas_to_chp + offgas_ch4
+    bg_results_dict['methane_to_chp'] = methane_biogas_to_chp + offgas_ch4
 
     """electricity demand"""
-    electricity_demand = bg.electricity_demand(env_config, biogas_to_upgrading)
+    bg_results_dict['electricity_demand_biogas_upgrading'] = bg.electricity_demand(env_config, biogas_to_upgrading)
 
     """electricity generated with sofc"""
-    electricity_generated = chp.electricity_generated_sofc(env_config, biomethane_ch4)
+    bg_results_dict['electricity_generated_sofc'] = chp.electricity_generated_sofc(env_config,
+                                                                                   bg_results_dict['biomethane_ch4'])
 
     """convert methane loss from m3 to kg CH4"""
-    ch4_loss_upgrading = methane_volume_to_mass(env_config, ch4_loss_upgrading)
+    bg_results_dict['methane_emissions_biogas_upgrading'] = methane_volume_to_mass(env_config, bg_results_dict['methane_emissions_biogas_upgrading'])
 
     """store calculations in input df"""
-    dfc.store_value_in_results_df(input_df, "electricity_demand_biogas_upgrading", "value", electricity_demand)
-
-    dfc.store_value_in_results_df(input_df, "methane_to_chp", "value", methane_to_chp)
-    dfc.store_value_in_results_df(input_df, "biomethane_volume_tot", "value", biomethane_volume)
-    dfc.store_value_in_results_df(input_df, "biomethane_ch4", "value", biomethane_ch4)
-    dfc.store_value_in_results_df(input_df, "ch4_loss_upgrading", "value", ch4_loss_upgrading)
-
-    dfc.store_value_in_results_df(input_df, "electricity_generated_sofc", "value", electricity_generated)
+    store_dict_in_results(input_df, bg_results_dict)
 
     """add values to totals"""
-    dfc.add_value_to_results_df(input_df, "electricity_demand_tot", "value", electricity_demand)
-    dfc.add_value_to_results_df(input_df, "ch4_emissions", "value", ch4_loss_upgrading)
-    dfc.add_value_to_results_df(input_df, "electricity_generated_tot", "value", electricity_generated)
+    dfc.add_value_to_results_df(input_df, "electricity_demand_tot", "value",
+                                bg_results_dict['electricity_demand_biogas_upgrading'])
+    dfc.add_value_to_results_df(input_df, "methane_emissions", "value", bg_results_dict['methane_emissions_biogas_upgrading'])
+    dfc.add_value_to_results_df(input_df, "electricity_generated_tot", "value",
+                                bg_results_dict['electricity_generated_sofc'])
 
     """ calculate chp output as well"""
     input_df = calc_chp_output(input_df, env_config)
@@ -827,32 +864,21 @@ def steam_pre_treatment(input_df, env_config):
     :return: updated input df with increased methane total and heat demand from steam pre treatment. Only total methane
     is updated, since the subdivision in solid, liquid and straw is not necessary anymore after that.
     """
-    manure_solid = dfc.find_value_in_results_df(input_df, "manure_solid")
-    manure_straw = dfc.find_value_in_results_df(input_df, "manure_straw")
-    methane_solid = dfc.find_value_in_results_df(input_df, "methane_solid_pre_storage")
-    methane_straw = dfc.find_value_in_results_df(input_df, "methane_straw_pre_storage")
-    methane_liquid = dfc.find_value_in_results_df(input_df, "methane_liquid_pre_storage")
+    steam_initial_data_dict = steam_initial_data(input_df)
 
     """create logs for debugging"""
-    logging.debug(f"manure_solid in steam pre treatment calculations: {manure_solid}")
-    logging.debug(f"manure_straw in steam pre treatment calculations: {manure_straw}")
-    logging.debug(f"methane_solid in steam pre treatment calculations: {methane_solid}")
-    logging.debug(f"methane_straw in steam pre treatment calculations: {methane_straw}")
-    logging.debug(f"methane_liquid in steam pre treatment calculations: {methane_liquid}")
+    logging.debug(f"initial data dict in steam pre treatment calculations: {steam_initial_data_dict}")
 
     """ calculate additional methane yield"""
-    methane_solid_steam = steam.methane_yield_steam(env_config, methane_solid)
-    methane_straw_steam = steam.methane_yield_steam(env_config, methane_straw)
+    methane_solid_steam = steam.methane_yield_steam(env_config, steam_initial_data_dict['methane_solid_pre_storage'])
+    methane_straw_steam = steam.methane_yield_steam(env_config, steam_initial_data_dict['methane_straw_pre_storage'])
 
-    methane_tot_steam = methane_straw_steam + methane_solid_steam + methane_liquid
-
-    """create logs for debugging"""
-    logging.debug(f"methane_solid_steam in steam pre treatment calculations: {methane_solid_steam}")
-    logging.debug(f"methane_straw_steam in steam pre treatment calculations: {methane_straw_steam}")
-    logging.debug(f"methane_tot_steam in steam pre treatment calculations: {methane_tot_steam}")
+    methane_tot_steam = methane_straw_steam + methane_solid_steam + steam_initial_data_dict[
+        'methane_liquid_pre_storage']
 
     """calculate heat demand"""
-    heat_demand = steam.heat_demand_steam(env_config, (manure_straw + manure_solid))
+    heat_demand = steam.heat_demand_steam(env_config, (
+            steam_initial_data_dict['manure_straw'] + steam_initial_data_dict['manure_solid']))
 
     """store calculations in input df"""
     dfc.store_value_in_results_df(input_df, "methane_tot_pre_storage", "value", methane_tot_steam)
@@ -871,13 +897,14 @@ def calc_env_impacts(input_df, env_config):
     :return: all environmental impacts saved in the input df and returned
     """
     """get necessary data points from input df"""
+    input_dict = input_df.to_dict('records')
+    logging.debug(f'input dataframe for calc_env_impacts: {input_dict}')
     initial_data_dict = get_initial_data_env_impact(input_df)
 
     """transport emissions are already calculated in farm calculations"""
 
     """calculate environmental impacts"""
-    env_impact_dict = {}
-    env_impact_dict = calc_gwp_impact(env_impact_dict, initial_data_dict, env_config)
+    env_impact_dict = calc_gwp_impact(initial_data_dict, env_config)
 
     co2_eq_no_electricity = (env_impact_dict['co2_methane_tot'] + env_impact_dict['co2_n2o_tot']
                              + initial_data_dict['co2_transport'])
@@ -886,8 +913,10 @@ def calc_env_impacts(input_df, env_config):
     """calculate swiss Umweltbelastungspunkte"""
     env_impact_dict['ubp_nh3'] = envi.ubp_nh3(env_config, initial_data_dict['nh3_emissions'])
     env_impact_dict['ubp_co2'] = envi.ubp_co2_eq(env_config, co2_eq_no_electricity)
-    env_impact_dict['ubp_electricity_demand_non_renew'] = envi.ubp_energy_non_renew(env_config, initial_data_dict['electricity_demand_tot'])
-    env_impact_dict['ubp_electricity_demand_renew'] = envi.ubp_energy_renew(env_config, initial_data_dict['electricity_demand_tot'])
+    env_impact_dict['ubp_electricity_demand_non_renew'] = envi.ubp_energy_non_renew(env_config, initial_data_dict[
+        'electricity_demand_tot'])
+    env_impact_dict['ubp_electricity_demand_renew'] = envi.ubp_energy_renew(env_config,
+                                                                            initial_data_dict['electricity_demand_tot'])
 
     """store impacts in input df"""
     store_dict_in_results(input_df, env_impact_dict)

@@ -69,6 +69,7 @@ layout = html.Div([
                                                'steam-ad-biogas-upgrading-calc': None}),
 
     # define the outputs
+    html.Div(id='output_calc_files'),
     html.Div(id="graph-container"),
     html.Div(id="test-output")
 ])
@@ -165,6 +166,23 @@ def plot_co2_sunburst(n_clicks, calc_file_paths_dict):
         return graphs_list
     return dash.no_update
 
+
+@callback(
+    Output('output_calc_files', 'children'),
+    Input('calculate-lca-button', 'n_clicks'),
+    State('calc-data-file-paths', 'data'),
+)
+def show_calc_files_debug(n_clicks, calc_file_paths_dict):
+    if n_clicks > 0:
+        children = []
+        for key, filepath in calc_file_paths_dict.items():
+            if filepath is not None:
+
+                calc_file_df = dfc. read_file_to_dataframe(filepath)
+                children.append(html.Div([dfc.display_df_as_table(calc_file_df, key)]))
+
+        return children
+    return dash.no_update
 
 """ 
 Display a table with the uploaded farm files, when clicking on the show button, Hide when clicking on Hide button

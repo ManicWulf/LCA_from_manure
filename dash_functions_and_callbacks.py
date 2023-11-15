@@ -167,21 +167,21 @@ Then create a dataframe with the list elements as the first column.
 """
 
 calc_values_general = ["manure_solid", "manure_liquid", "manure_straw", "methane_solid", "methane_liquid",
-                       "methane_straw", "methane_tot", "ch4_emissions", "nh3_emissions", "n2o_emissions", "n_tot",
-                       "sum_post_storage_time", "c_tot", "c_tot_solid", "c_tot_liquid", "c_tot_straw", "ch4_emissions_solid",
-                       "ch4_emissions_liquid", "ch4_emissions_straw", "manure_tot"]
+                       "methane_straw", "methane_tot", "methane_emissions", "nh3_emissions", "n2o_emissions", "n_tot",
+                       "sum_post_storage_time", "c_tot", "c_tot_solid", "c_tot_liquid", "c_tot_straw", "methane_emissions_solid",
+                       "methane_emissions_liquid", "methane_emissions_straw", "manure_tot"]
 
 calc_values_pre_storage_transport = ["methane_solid_pre_storage", "methane_liquid_pre_storage", "methane_straw_pre_storage",
                                      "methane_tot_pre_storage", "n_tot_pre_storage", "c_tot_pre_storage",
-                                     "ch4_emissions_pre_storage", "nh3_emissions_pre_storage", "n2o_emissions_pre_storage"]
+                                     "methane_emissions_pre_storage", "nh3_emissions_pre_storage", "n2o_emissions_pre_storage"]
 
 calc_values_post_storage_field = ["nh3_emissions_post_storage", "n2o_emissions_post_storage",
-                                  "ch4_emissions_post_storage", "nh3_emissions_field", "n2o_emissions_field"]
+                                  "methane_emissions_post_storage", "nh3_emissions_field", "n2o_emissions_field"]
 
-calc_values_ad = ["c_tot_ad", "methane_yield", "methane_loss_ad", "methane_to_chp", "effective_methane_after_ad",
+calc_values_ad = ["c_tot_ad", "methane_yield", "methane_emissions_ad", "methane_to_chp", "effective_methane_after_ad",
                   ]
 
-calc_values_biogas_upgrading = ["biomethane_volume_tot", "biomethane_ch4", "biogas", "co2_biogas", "ch4_loss_upgrading"]
+calc_values_biogas_upgrading = ["biomethane_volume_tot", "biomethane_ch4", "biogas", "co2_biogas", "methane_emissions_biogas_upgrading"]
 
 calc_values_energy = ["heat_demand_ad", "electricity_demand_ad", "electricity_demand_biogas_upgrading", "heat_demand_steam", "heat_demand_tot",
                       "electricity_demand_tot", "heat_generated_chp", "electricity_generated_chp", "electricity_generated_sofc",
