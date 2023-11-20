@@ -146,7 +146,8 @@ def plot_co2_sunburst(n_clicks, calc_file_paths_dict):
     :return:
     """
     if n_clicks > 0:
-        #create list with titles for the charts
+
+        # create list with titles for the charts
         title_list = ['CO2 Sunburst chart for No treatment pathway', 'CO2 Sunburst chart for ad only pathway',
                       'CO2 Sunburst chart for AD with biogas upgrading pathway', 'CO2 Sunburst chart for steam pretreatment with AD pathway',
                       'CO2 Sunburst chart for steam pretreatment with AD and Biogas upgrading pathway']
@@ -156,14 +157,19 @@ def plot_co2_sunburst(n_clicks, calc_file_paths_dict):
 
         # create empty list for returning the results
         graphs_list = []
+        dataframe_list = []
 
         # iterate through the calc_file dict and title list to create the charts
         for (key, filepath), title in zip(calc_file_paths_dict.items(), title_list):
             if filepath is not None:
                 dataframe = dfc.read_file_to_dataframe(filepath)
+                dataframe_list.append(dataframe)
                 graphs_list.append(dcc.Graph(id=title, figure=pac.sunburst_co2(dataframe, title)))
 
+        graphs_list.append(pac.create_bar_chart_list(dataframe_list))
         return graphs_list
+
+
     return dash.no_update
 
 

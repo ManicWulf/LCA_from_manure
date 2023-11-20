@@ -910,6 +910,10 @@ def calc_env_impacts(input_df, env_config):
                              + initial_data_dict['co2_transport'])
     env_impact_dict['co2_eq_tot'] = co2_eq_no_electricity + env_impact_dict['co2_electricity_demand_tot']
 
+    # construction impacts
+    env_impact_dict['co2_ad_construction'] = envi.gwp100_ad_plant_construction(env_config)
+    env_impact_dict['co2_chp_construction'] = envi.gwp100_chp_generator_construction(env_config)
+
     """calculate swiss Umweltbelastungspunkte"""
     env_impact_dict['ubp_nh3'] = envi.ubp_nh3(env_config, initial_data_dict['nh3_emissions'])
     env_impact_dict['ubp_co2'] = envi.ubp_co2_eq(env_config, co2_eq_no_electricity)

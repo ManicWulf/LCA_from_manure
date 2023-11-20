@@ -192,6 +192,7 @@ calc_values_env_impact = ["co2_methane_pre_storage", "co2_methane_post_storage",
                           "co2_n2o_field", "co2_n2o_tot", "co2_electricity_mix", "co2_electricity_demand_ad", "co2_electricity_demand_biogas_upgrading",
                           "co2_electricity_demand_tot", "co2_heat_oil",
                           "co2_transport", "ubp_nh3", "ubp_co2", "ubp_electricity_demand_renew", "ubp_electricity_demand_non_renew",
+                          "co2_ad_construction", "co2_chp_construction",
                           "co2_eq_tot"]
 
 calc_values_needed = (calc_values_general + calc_values_pre_storage_transport + calc_values_post_storage_field +
@@ -367,7 +368,7 @@ def create_sunburst_chart(emissions, sources, values, title):
     return sb_chart
 
 
-def create_bar_chart(types, values, title, y_axis_title):
+def create_bar_chart(value_label_list, data_df, title, y_axis_title):
     """
     Create a bar chart using Plotly Express.
 
@@ -380,17 +381,9 @@ def create_bar_chart(types, values, title, y_axis_title):
     Returns:
     - A bar chart.
     """
-    # Ensure the lists are of the same length
-    assert len(types) == len(values), "Input lists must be of the same length"
-
-    # Convert the lists into a DataFrame
-    data = pd.DataFrame({
-        'Types': types,
-        'Values': values
-    })
 
     # Create the bar chart
-    bar_chart = px.bar(data, x="Types", y="Values", title=title)
+    bar_chart = px.bar(data_df, x="Types", y=value_label_list, title=title)
 
     # Set y-axis title and return the chart
     bar_chart.update_layout(yaxis_title=y_axis_title)
