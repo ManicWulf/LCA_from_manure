@@ -839,9 +839,12 @@ def calc_biogas_upgrading(input_df, env_config):
     bg_results_dict['electricity_generated_sofc'] = chp.electricity_generated_sofc(env_config,
                                                                                    bg_results_dict['biomethane_ch4'])
 
+    """Electricity and heat generated with CHP"""
+    bg_results_dict['electricity_generated_chp'], bg_results_dict['heat_generated_tot'] = chp.energy_produced(bg_results_dict['methane_to_chp'], env_config)
+
     """convert methane loss from m3 to kg CH4"""
     bg_results_dict['methane_emissions_biogas_upgrading'] = methane_volume_to_mass(env_config, bg_results_dict['methane_emissions_biogas_upgrading'])
-
+    bg_results_dict['electricity_generated_tot'] = bg_results_dict['electricity_generated_sofc'] + bg_results_dict['electricity_generated_chp']
     """store calculations in input df"""
     store_dict_in_results(input_df, bg_results_dict)
 
@@ -849,8 +852,7 @@ def calc_biogas_upgrading(input_df, env_config):
     dfc.add_value_to_results_df(input_df, "electricity_demand_tot", "value",
                                 bg_results_dict['electricity_demand_biogas_upgrading'])
     dfc.add_value_to_results_df(input_df, "methane_emissions", "value", bg_results_dict['methane_emissions_biogas_upgrading'])
-    dfc.add_value_to_results_df(input_df, "electricity_generated_tot", "value",
-                                bg_results_dict['electricity_generated_sofc'])
+
 
     """ calculate chp output as well"""
     input_df = calc_chp_output(input_df, env_config)

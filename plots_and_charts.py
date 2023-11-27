@@ -4,6 +4,7 @@ File for all plots and charts
 """
 
 import pandas as pd
+from dash import dcc
 
 import dash_functions_and_callbacks as dfc
 
@@ -143,9 +144,9 @@ def bar_chart_nh3(list_input_df):
     list_nh3_field = []
 
     for df in list_input_df:
-        list_nh3_pre_storage.append(dfc.find_value_in_results_df(df, 'co2_nh3_pre_storage'))
-        list_nh3_post_storage.append(dfc.find_value_in_results_df(df, 'co2_nh3_post_storage'))
-        list_nh3_field.append(dfc.find_value_in_results_df(df, 'co2_nh3_field'))
+        list_nh3_pre_storage.append(dfc.find_value_in_results_df(df, 'nh3_emissions_pre_storage'))
+        list_nh3_post_storage.append(dfc.find_value_in_results_df(df, 'nh3_emissions_post_storage'))
+        list_nh3_field.append(dfc.find_value_in_results_df(df, 'nh3_emissions_field'))
 
     label_list = ['Pre Storage', 'Post Storage', 'Field application']
     data_df = pd.DataFrame({
@@ -191,15 +192,17 @@ def bar_chart_co2(list_input_df):
         list_co2_electricity_substituted.append((dfc.find_value_in_results_df(df, 'co2_electricity_mix')) * -1) # multiply by -1, because they are saved emissions
         list_co2_heat_substituted.append((dfc.find_value_in_results_df(df, 'co2_heat_oil')) * -1)   # multiply by -1, because they are saved emissions
 
-    label_list = ['N\u2082O', 'CH\u2083', 'Transport', 'Electricity', 'Construction AD', 'Construction CHP']
+    label_list = ['N\u2082O', 'CH\u2084', 'Transport', 'Electricity', 'Construction AD', 'Construction CHP', 'Electricity substituted', 'Heat substituted']
     data_df = pd.DataFrame({
         'Types': list_types,
         'N\u2082O': list_co2_n2o,
-        'CH\u2083': list_co2_ch4,
+        'CH\u2084': list_co2_ch4,
         'Transport': list_co2_transport,
         'Electricity': list_co2_electricity,
         'Construction AD': list_co2_construction_ad,
-        'Construction CHP': list_co2_construction_chp
+        'Construction CHP': list_co2_construction_chp,
+        'Electricity substituted': list_co2_electricity_substituted,
+        'Heat substituted': list_co2_heat_substituted
     })
     title = 'Global Warming Potential 100'
     y_axis_title = 'GWP 100 [kg CO\u2082 eq.]'
@@ -313,9 +316,14 @@ def bar_chart_energy(list_input_df):
 
 
 def create_bar_chart_list(list_input_df):
+    bar_charts_list = [dcc.Graph(id='bar_ch4', figure=bar_chart_ch4(list_input_df)),
+                       dcc.Graph(id='bar_co2', figure=bar_chart_co2(list_input_df)),
+                       dcc.Graph(id='bar_n2o', figure=bar_chart_n2o(list_input_df)),
+                       dcc.Graph(id='bar_nh3', figure=bar_chart_nh3(list_input_df)),
+                       dcc.Graph(id='bar_energy', figure=bar_chart_energy(list_input_df)),
+                       dcc.Graph(id='bar_ubp', figure=bar_chart_ubp(list_input_df))]
 
-    return [bar_chart_ch4(list_input_df), bar_chart_co2(list_input_df), bar_chart_nh3(list_input_df),
-            bar_chart_n2o(list_input_df), bar_chart_energy(list_input_df), bar_chart_ubp(list_input_df)]
+    return bar_charts_list
 
 
 

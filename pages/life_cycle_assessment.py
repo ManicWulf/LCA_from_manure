@@ -166,7 +166,7 @@ def plot_co2_sunburst(n_clicks, calc_file_paths_dict):
                 dataframe_list.append(dataframe)
                 graphs_list.append(dcc.Graph(id=title, figure=pac.sunburst_co2(dataframe, title)))
 
-        graphs_list.append(pac.create_bar_chart_list(dataframe_list))
+        graphs_list.extend(pac.create_bar_chart_list(dataframe_list))
         return graphs_list
 
 
