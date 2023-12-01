@@ -213,10 +213,11 @@ functions to work with the config and farm files, find correct values etc.
 # returns the value from animal config
 def find_value_animal_config(animal, stable, value, animal_config):
     """Strip any whitespace from the strings and make them all lower case to prevent errors"""
-    animal_config['animal_type_ger'] = animal_config['animal_type_ger'].str.strip().str.lower()
+    animal_config = animal_config.copy()
+    animal_config['animal_type'] = animal_config['animal_type'].str.strip().str.lower()
     animal = animal.strip().lower()
 
-    series = animal_config.query(f'animal_type_ger == "{animal}" and stable_type == {stable}')[value]
+    series = animal_config.query(f'animal_type == "{animal}" and stable_type == {stable}')[value]
 
     """debugging"""
     logging.debug(f'find_value_animal_config series for animal= "{animal}", stable_type = "{stable}" and value = "{value}": {series}')
@@ -232,10 +233,11 @@ def find_value_animal_config(animal, stable, value, animal_config):
 def find_value_animal_config_1_variable(animal,value, animal_config):
 
     """Strip any whitespace from the strings and make them all lower case to prevent errors"""
-    animal_config['animal_type_ger'] = animal_config['animal_type_ger'].str.strip().str.lower()
+    animal_config = animal_config.copy()
+    animal_config['animal_type'] = animal_config['animal_type'].str.strip().str.lower()
     animal = animal.strip().lower()
 
-    series = animal_config.query(f'animal_type_ger == "{animal}"')[value]
+    series = animal_config.query(f'animal_type == "{animal}"')[value]
 
     """debugging"""
     logging.debug(
@@ -296,7 +298,7 @@ def get_column_no_duplicate(df, column_name):
 
 # Get list of animal types used in animal config. For now using animal_type_ger, until data_input file is adapted to new code.
 def get_animal_types(animal_config):
-    animal_types = get_column_no_duplicate(animal_config, "animal_type_ger")
+    animal_types = get_column_no_duplicate(animal_config, "animal_type")
     return animal_types
 
 

@@ -514,6 +514,10 @@ def steam_initial_data(input_df):
 
 
 def calc_single_farm(results_df, farm_data, animal_config, env_config):
+
+    # make a copy of input_df
+    results_df = results_df.copy()
+
     nitrogen_emissions_dict = {'n_tot': 0}
 
     manure_tot = 0
@@ -524,9 +528,6 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
     for animal in animal_types:
 
         # get values from the farm file
-        """create a log for debugging purposes"""
-        logging.debug(f"Farm Data: {farm_data.head()}")
-
         animal_data_dict = get_animal_data(animal, farm_data)
 
         logging.debug(f"Animal_data_dict for {animal}: {animal_data_dict}")
@@ -678,6 +679,9 @@ def post_storage_and_field_emissions(input_df, env_config, ad):
     :return: results dataframe with updated emission values for post-storage emissions and field emissions
     """
 
+    # make a copy of input_df
+    input_df = input_df.copy()
+
     """get the necessary values from the input dataframe"""
     c_tot, n_tot, post_storage_time = get_initial_data_field_application(input_df, ad)
 
@@ -725,6 +729,10 @@ def calc_anaerobic_digestion(input_df, env_config):
     :param env_config:
     :return: emissions and biogas yield of AD process are stored in the input_df and returned
     """
+    # make a copy of input_df
+    input_df = input_df.copy()
+
+
     """store data in log file for debugging"""
     logging.debug(f"input dataframe in anaerobic digestion calculations: {input_df}")
     # define new dictionary for values that are going to be stored later
@@ -781,6 +789,10 @@ def calc_chp_output(input_df, env_config):
     :param env_config:
     :return:
     """
+
+    # make a copy of input_df
+    input_df = input_df.copy()
+
     methane_to_chp = dfc.find_value_in_results_df(input_df, "methane_to_chp")
     heat, electricity = chp.energy_produced(methane_to_chp, env_config)
     """store values in input df"""
@@ -801,7 +813,8 @@ def calc_biogas_upgrading(input_df, env_config):
     :return:
     """
 
-    # initiate dictionary for biogas upgrading results
+    # make a copy of input_df
+    input_df = input_df.copy()
 
     # get biogas value from input df
     biogas = dfc.find_value_in_results_df(input_df, "biogas")
@@ -866,6 +879,9 @@ def steam_pre_treatment(input_df, env_config):
     :return: updated input df with increased methane total and heat demand from steam pre treatment. Only total methane
     is updated, since the subdivision in solid, liquid and straw is not necessary anymore after that.
     """
+    # make a copy of input_df
+    input_df = input_df.copy()
+
     steam_initial_data_dict = steam_initial_data(input_df)
 
     """create logs for debugging"""
@@ -898,6 +914,9 @@ def calc_env_impacts(input_df, env_config):
     :param env_config:
     :return: all environmental impacts saved in the input df and returned
     """
+    # make a copy of input_df
+    input_df = input_df.copy()
+
     """get necessary data points from input df"""
     input_dict = input_df.to_dict('records')
     logging.debug(f'input dataframe for calc_env_impacts: {input_dict}')
