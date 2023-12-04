@@ -16,10 +16,12 @@ def storage_emissions(time, x_tot, emission_factor):
     :param emission_factor: nutrient specific daily emission value
     :return: recursive function, returns emissions in kg elemental (N, C)
     """
-    emission = x_tot * emission_factor
+    x_tot_new = x_tot * ((1 - emission_factor)**time)
+    emission = x_tot - x_tot_new
+    """emission = x_tot * emission_factor
     x_tot_new = x_tot - emission
     if time > 0 and x_tot_new > 0:
-        return emission + storage_emissions(time - 1, x_tot_new, emission_factor)
+        return emission + storage_emissions(time - 1, x_tot_new, emission_factor)"""
     return emission
 
 

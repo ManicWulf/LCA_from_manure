@@ -4,7 +4,7 @@ import os
 import time
 import plotly.graph_objects as go
 import logging
-import h5py
+
 
 
 import farm_calc as fc
@@ -38,7 +38,7 @@ for filename in farm_paths_list:
 
 
 # Define the sample_size variable
-sample_size = 20  # You can adjust this value as needed
+sample_size = 100  # You can adjust this value as needed
 
 
 def write_dict_to_csv(simulation_results_dict, file_path):
@@ -61,23 +61,34 @@ def save_to_hdf5(simulation_results_dict, filename="simulation_results.h5"):
     with pd.HDFStore(filepath, mode='w') as store:
         for treatment, df_list in simulation_results_dict.items():
             for idx, df in enumerate(df_list):
-                # Construct a key for each dataframe
-                key = f'{treatment}/{idx}'
-                # Save the dataframe in HDF5 format
+                # Prepend 'sim_' to the key to make it a valid identifier
+                key = f'{treatment}_{idx}'
                 store.put(key, df, format='table')
+
 
 
 def load_from_hdf5(filename="simulation_results.h5"):
     results = {}
     filepath = f'monte_carlo_simulation/{filename}'
     with pd.HDFStore(filepath, mode='r') as store:
-        for key in store.keys():
-            treatment, _ = key.lstrip('/').split('/')
+        # Custom sorting function to handle the new key format
+        def sorting_key_func(x):
+            parts = x.lstrip('/').rsplit('_', 1)  # Splitting by the last underscore
+            if len(parts) > 1 and parts[1].isdigit():
+                return (parts[0], int(parts[1]))
+            else:
+                return (parts[0], x)
+
+        sorted_keys = sorted(store.keys(), key=sorting_key_func)
+        for key in sorted_keys:
+            treatment, _ = key.lstrip('/').rsplit('_', 1)  # Splitting by the last underscore
             if treatment not in results:
                 results[treatment] = []
             df = store[key]
             results[treatment].append(df)
     return results
+
+
 
 
 # function to combine the calculations from farm_calc.py for the monte carlo simulation
@@ -120,7 +131,7 @@ def lca_calculation(env_config, animal_config, list_farms=None):
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    #print(f"Total runtime: {elapsed_time} seconds")
+    print(f"Total runtime: {elapsed_time} seconds")
     return no_treatment_df, ad_only_df, ad_biogas_df, steam_ad_df, steam_ad_biogas_df
 
 
