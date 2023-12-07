@@ -75,7 +75,6 @@ def dataframe_to_json(dataframe):
 
 # Takes a json object (from dcc.Store) and creates a pandas Dataframe from it
 def json_to_dataframe(json_string):
-    logging.debug(f'Attempting to convert JSON to dataframe: {json_string}')
     return pd.read_json(io.StringIO(json_string), orient="records")
 
 
@@ -208,6 +207,27 @@ def create_dataframe_calc_empty():
 functions to work with the config and farm files, find correct values etc.
 """
 
+def preprocess_env_config(env_config):
+    if 'name' in env_config.columns:
+        # If 'name' is a column, preprocess it
+        env_config['name'] = env_config['name'].str.strip().str.lower()
+    return env_config
+
+
+
+def index_env_config(env_config):
+    """
+    Set the 'name' column as an index for the env_config DataFrame.
+    Checks if 'name' is already set as an index to avoid re-indexing.
+    """
+    if 'name' in env_config.columns:
+        # If 'name' is a column, set it as index
+        env_config.set_index('name', inplace=True)
+    # If 'name' is already an index, no action is needed
+    return env_config
+
+
+
 
 # takes input for animal type and stable type, the name of the value (as a string) that is being searched for, and the dataframe from which to search (animal config)
 # returns the value from animal config
@@ -219,9 +239,7 @@ def find_value_animal_config(animal, stable, value, animal_config):
 
     series = animal_config.query(f'animal_type == "{animal}" and stable_type == {stable}')[value]
 
-    """debugging"""
-    logging.debug(f'find_value_animal_config series for animal= "{animal}", stable_type = "{stable}" and value = "{value}": {series}')
-    """"""
+
     if series.size == 0:
         return False
     else:
@@ -239,17 +257,14 @@ def find_value_animal_config_1_variable(animal,value, animal_config):
 
     series = animal_config.query(f'animal_type == "{animal}"')[value]
 
-    """debugging"""
-    logging.debug(
-        f'find_value_animal_config_1_variable series for animal= "{animal}" and value = "{value}": {series}')
-    """"""
+
     if series.size == 0:
         return False
     else:
         return series.iloc[0]
 
 # find values in env config. value is the name of the column. "value" for the actual value, "stdev" for the uncertainty
-def find_value_env_config(factor, value, env_config):
+def find_value_env_config_old(factor, value, env_config):
 
     """Strip any whitespace from the strings and make them all lower case to prevent errors"""
     env_config['name'] = env_config['name'].str.strip().str.lower()
@@ -257,13 +272,27 @@ def find_value_env_config(factor, value, env_config):
 
     series = env_config.query(f'name == "{factor}"')[value]
     result = series.iloc[0]
-    """debugging"""
-    logging.debug(
-        f'find_value_env_config series for factor= "{factor}" and value = "{value}": {series}')
-    logging.debug(f'Entire env_config Dataframe read into find_value_env_config: {env_config}')
-    logging.debug(f'Result from find_value_env_config: {result}')
-    """"""
+
     return result
+
+
+def find_value_env_config(factor, value, env_config):
+    """
+    Find a value in the env_config DataFrame based on the factor and value column.
+    Assumes env_config is preprocessed and indexed by 'name'.
+    """
+    # Ensure factor is in the correct format (lowercase, stripped)
+    factor = factor.strip().lower()
+
+    # Retrieve the value using the index
+    # Using .at for faster access as we are retrieving a single value
+    result = env_config.at[factor, value]
+
+    # Optional: Logging for debugging (consider reducing/removing for performance)
+    #logging.debug(f'find_value_env_config: Factor="{factor}", Value="{value}", Result={result}')
+
+    return result
+
 
 
 # find values in farm dataframes
@@ -274,11 +303,6 @@ def find_value_farm(animal_type, value, farm):
 
     series = farm.query(f'name == "{animal_type}"')[value]
 
-    """debugging"""
-    logging.debug(
-        f'find_value_farm series for animal= "{animal_type}" and value = "{value}": {series}')
-    logging.debug(f'Entire farm Dataframe read into find_value_farm: {farm}')
-    """"""
     if not series.empty:
         return series.iloc[0]
     else:

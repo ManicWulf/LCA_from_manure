@@ -518,19 +518,20 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
     # make a copy of input_df
     results_df = results_df.copy()
 
+
     nitrogen_emissions_dict = {'n_tot': 0}
 
     manure_tot = 0
 
     # get a list of all animal types used from the config file (Attention: Right now it still uses animal_type_ger until Data_input.py is updated!!
     animal_types = dfc.get_animal_types(animal_config)
-    logging.debug(f'list of animal types: {animal_types}')
+
     for animal in animal_types:
 
         # get values from the farm file
         animal_data_dict = get_animal_data(animal, farm_data)
 
-        logging.debug(f"Animal_data_dict for {animal}: {animal_data_dict}")
+
 
         # get values from animal_config
         # check if there are any animals in the first place
@@ -542,9 +543,6 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
 
             # get dry weight and organic dry weight for manure, and vs for straw
             dw_odw_dict = get_dw_odw(animal, animal_config)
-
-            logging.debug(f'Methane_pot_dict for {animal}: {methane_pot_dict}')
-            logging.debug(f'dw_odw_dict for {animal}: {dw_odw_dict}')
 
             # get Nitrogen
             n_tot_per_animal = dfc.find_value_animal_config_1_variable(animal, "nitrogen_content", animal_config)
@@ -561,7 +559,7 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
                 manure_tot += (manure_methane_dict['manure_solid'] + manure_methane_dict['manure_liquid'] +
                                manure_methane_dict['manure_straw'])
 
-                logging.debug(f'manure_methane_dict for {animal}: {manure_methane_dict}')
+
 
                 # add up methane potential and total manure
                 add_dict_to_results(results_df, manure_methane_dict)
@@ -575,7 +573,6 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
                 manure_tot += (manure_methane_dict['manure_solid'] + manure_methane_dict['manure_liquid'] +
                                manure_methane_dict['manure_straw'])
 
-                logging.debug(f'manure_methane_dict for {animal}: {manure_methane_dict}')
 
                 # add up methane potential and total manure
                 add_dict_to_results(results_df, manure_methane_dict)
@@ -633,26 +630,14 @@ calculate manure, methane potential, pre-storage emissions and transportation co
 """
 
 
-def calc_all_farms(list_farms, list_names, animal_config, env_config):
-    results_df = dfc.create_dataframe_calc_empty()
-
-    # do the calculations for all farms
-    for farm, name in zip(list_farms, list_names):
-        # get a dataframe from the uploaded farm file
-        farm_df = dfc.parse_contents_to_dataframe(farm, name)
-        # calculate single farm
-        results_df = calc_single_farm(results_df, farm_df, animal_config, env_config)
-
-    """calculate the weighted post-storage time, with methane potential as the weight. """
-    methane_tot = dfc.find_value_farm("methane_tot", "value", results_df)
-    sum_post_storage_time = dfc.find_value_farm("sum_post_storage_time", "value", results_df)
-    sum_post_storage_time = sum_post_storage_time / methane_tot
-    dfc.store_value_in_results_df(results_df, "sum_post_storage_time", "value", sum_post_storage_time)
-    return results_df
-
-
 def calc_all_farms_new(list_farms, animal_config, env_config):
+
+    # preprocess env_config for more efficiency
+    env_config = dfc.preprocess_env_config(env_config)
+    env_config = dfc.index_env_config(env_config)
+
     results_df = dfc.create_dataframe_calc_empty()
+
 
     # do the calculations for all farms
     for farm in list_farms:
@@ -681,6 +666,10 @@ def post_storage_and_field_emissions(input_df, env_config, ad):
 
     # make a copy of input_df
     input_df = input_df.copy()
+
+    # preprocess env_config for more efficiency
+    env_config = dfc.preprocess_env_config(env_config)
+    env_config = dfc.index_env_config(env_config)
 
     """get the necessary values from the input dataframe"""
     c_tot, n_tot, post_storage_time = get_initial_data_field_application(input_df, ad)
@@ -732,9 +721,10 @@ def calc_anaerobic_digestion(input_df, env_config):
     # make a copy of input_df
     input_df = input_df.copy()
 
+    # preprocess env_config for more efficiency
+    env_config = dfc.preprocess_env_config(env_config)
+    env_config = dfc.index_env_config(env_config)
 
-    """store data in log file for debugging"""
-    logging.debug(f"input dataframe in anaerobic digestion calculations: {input_df}")
     # define new dictionary for values that are going to be stored later
 
     """ methane potential in m3 methane after pre-storage"""
@@ -790,6 +780,10 @@ def calc_chp_output(input_df, env_config):
     :return:
     """
 
+    # preprocess env_config for more efficiency
+    env_config = dfc.preprocess_env_config(env_config)
+    env_config = dfc.index_env_config(env_config)
+
     # make a copy of input_df
     input_df = input_df.copy()
 
@@ -812,6 +806,10 @@ def calc_biogas_upgrading(input_df, env_config):
     :param env_config:
     :return:
     """
+    # preprocess env_config for more efficiency
+    env_config = dfc.preprocess_env_config(env_config)
+    env_config = dfc.index_env_config(env_config)
+
 
     # make a copy of input_df
     input_df = input_df.copy()
@@ -882,10 +880,13 @@ def steam_pre_treatment(input_df, env_config):
     # make a copy of input_df
     input_df = input_df.copy()
 
+    # preprocess env_config for more efficiency
+    env_config = dfc.preprocess_env_config(env_config)
+    env_config = dfc.index_env_config(env_config)
+
     steam_initial_data_dict = steam_initial_data(input_df)
 
-    """create logs for debugging"""
-    logging.debug(f"initial data dict in steam pre treatment calculations: {steam_initial_data_dict}")
+
 
     """ calculate additional methane yield"""
     methane_solid_steam = steam.methane_yield_steam(env_config, steam_initial_data_dict['methane_solid_pre_storage'])
@@ -917,9 +918,12 @@ def calc_env_impacts(input_df, env_config):
     # make a copy of input_df
     input_df = input_df.copy()
 
+    # preprocess env_config for more efficiency
+    env_config = dfc.preprocess_env_config(env_config)
+    env_config = dfc.index_env_config(env_config)
+
     """get necessary data points from input df"""
-    input_dict = input_df.to_dict('records')
-    logging.debug(f'input dataframe for calc_env_impacts: {input_dict}')
+
     initial_data_dict = get_initial_data_env_impact(input_df)
 
     """transport emissions are already calculated in farm calculations"""
