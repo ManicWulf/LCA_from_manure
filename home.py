@@ -14,12 +14,15 @@ import io
 import logging
 import dash
 import dash_bootstrap_components as dbc
-from dash import Dash, dcc, html, Input, Output, State, MATCH, Patch, ALL, dash_table, callback
+from dash import Dash, dcc, html, Input, Output, State, MATCH, Patch, ALL, dash_table, callback, no_update
 from dash.dependencies import Input, Output, State
 
 
 import dash_functions_and_callbacks as dfc
+from app import app
 import backend_calculations as bc
+from pages.data_input import data_input_layout
+from pages.life_cycle_assessment import lca_layout
 
 
 logging.basicConfig(level=logging.DEBUG,
@@ -28,8 +31,8 @@ logging.basicConfig(level=logging.DEBUG,
                     filemode='w')  # This means the log file will be overwritten each time the app is started. Use 'a' to append.
 
 
-# Create a Dash app
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], use_pages=True)
+
+
 
 app.server.secret_key = 'farm_life_cycle_assessment'
 
@@ -48,6 +51,7 @@ If the default config files are not loading, please enter the correct path in th
 default_animal_config_path = "default_configs/default_animal_config.xlsx"
 default_environmental_config_path = "default_configs/default_environmental_config.xlsx"
 ###########################################################################
+
 
 
 # Start the main app
@@ -73,53 +77,22 @@ if __name__ == "__main__":
                 # Allow multiple files to be uploaded
                 multiple=True
             ),
-        dcc.Location(id="location"),
-        html.Button('Input Data', id='data-input-button',  n_clicks=0),
-        html.Button('Calculate LCA', id='lca-button', n_clicks=0),
-        html.Button('Uncertainties', id='uncertainty-button', n_clicks=0),
-        html.Button('Sensitivity Analysis', id='sensitivity-analysis-button', n_clicks=0),
+        dcc.Location(id="location", refresh=False),
+        dbc.Row([
+            dbc.Col(dbc.Button("Input Data", href="/input", color="primary", className="me-1"), width="auto"),
+            dbc.Col(dbc.Button("Calculate LCA", href="/lca", color="primary", className="me-1"), width="auto"),
+            dbc.Col(dbc.Button("Uncertainties", href="/uncertainty", color="primary", className="me-1"), width="auto"),
+            dbc.Col(dbc.Button("Sensitivity Analysis", href="/sensitivity-analysis", color="primary", className="me-1"),
+                    width="auto"),
+        ]),
         html.Br(),
         html.Br(),
+        # Dynamic content container
         dash.page_container,
         html.Div(id="output-config-upload"),
         dcc.Store(id='config-paths', data={"environmental_config": default_environmental_config_path,
                                            "animal_config": default_animal_config_path}),
     ])
-
-
-    """
-    callback to navigate the pages with the buttons defined earlier
-    """
-    @app.callback(
-        Output("location", "href"),
-        Input("data-input-button", "n_clicks"),
-        Input("lca-button", "n_clicks"),
-        Input("uncertainty-button", "n_clicks"),
-        Input("sensitivity-analysis-button", "n_clicks"),
-        State("location", "href")
-    )
-    def navigate_to_page(
-            data_input_button_n_clicks,
-            lca_button_n_clicks,
-            uncertainty_button_n_clicks,
-            sensitivity_analysis_button_n_clicks,
-            href
-    ):
-        #Navigates to the specified page.
-
-        # Get the ID of the button that triggered the callback
-        triggered_button_id = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
-
-        # Check if the triggered button ID is empty
-        if not triggered_button_id:
-            return href
-
-        # Get the page path for the triggered button
-        page_path = page_paths[triggered_button_id]
-
-        # Return the page path
-        return page_path
-
 
 
     """

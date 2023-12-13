@@ -22,57 +22,61 @@ import backend_calculations as bc
 
 dash.register_page(__name__, path="/lca")
 
-layout = html.Div([
-    html.H1('Life cycle assessment'),
-    html.Div('Upload your farm.csv files here.'),
-    dcc.Upload(
-        id='upload-data-lca',
-        children=html.Div([
-            'Drag and Drop or ',
-            html.A('Select Files')
-        ]),
-        style={
-            'width': '100%',
-            'height': '60px',
-            'lineHeight': '60px',
-            'borderWidth': '1px',
-            'borderStyle': 'dashed',
-            'borderRadius': '5px',
-            'textAlign': 'center',
-            'margin': '10px'
-        },
-        # Allow multiple files to be uploaded
-        multiple=True
-    ),
-    html.Button("Show Config files", id="output-data-home-button", n_clicks=0),
-    html.Button("Hide Config files", id="hide-data-home-button", n_clicks=0),
-    html.Br(),
-    html.Br(),
-    html.Button("Show farm files", id="show-farm-files-button", n_clicks=0),
-    html.Button("Hide farm files", id="hide-farm-files-button", n_clicks=0),
-    html.Br(),
-    html.Br(),
-    html.Button("Calculate LCA", id="calculate-lca-button", n_clicks=0),
-    html.Br(),
-    html.Div(id='output-data-upload-lca'),
-    html.Br(),
-    html.Div(id="output-data-home"),
-    html.Div(id="file-upload-output"),
+def lca_layout():
+    layout = html.Div([
+        html.H1('Life cycle assessment'),
+        html.Div('Upload your farm.csv files here.'),
+        dcc.Upload(
+            id='upload-data-lca',
+            children=html.Div([
+                'Drag and Drop or ',
+                html.A('Select Files')
+            ]),
+            style={
+                'width': '100%',
+                'height': '60px',
+                'lineHeight': '60px',
+                'borderWidth': '1px',
+                'borderStyle': 'dashed',
+                'borderRadius': '5px',
+                'textAlign': 'center',
+                'margin': '10px'
+            },
+            # Allow multiple files to be uploaded
+            multiple=True
+        ),
+        html.Button("Show Config files", id="output-data-home-button", n_clicks=0),
+        html.Button("Hide Config files", id="hide-data-home-button", n_clicks=0),
+        html.Br(),
+        html.Br(),
+        html.Button("Show farm files", id="show-farm-files-button", n_clicks=0),
+        html.Button("Hide farm files", id="hide-farm-files-button", n_clicks=0),
+        html.Br(),
+        html.Br(),
+        html.Button("Calculate LCA", id="calculate-lca-button", n_clicks=0),
+        html.Br(),
+        html.Div(id='output-data-upload-lca'),
+        html.Br(),
+        html.Div(id="output-data-home"),
+        html.Div(id="file-upload-output"),
 
-    # define all the store elements to store data frames
-    dcc.Store(id="stored-farm-file-paths"),
-    dcc.Store(id="calc-data-file-paths", data={'farm-calc': None,
-                                               'no-treatment-calc': None,
-                                               'ad-only-calc': None,
-                                               'ad-biogas-upgrading-calc': None,
-                                               'steam-ad-calc': None,
-                                               'steam-ad-biogas-upgrading-calc': None}),
+        # define all the store elements to store data frames
+        dcc.Store(id="stored-farm-file-paths"),
+        dcc.Store(id="calc-data-file-paths", data={'farm-calc': None,
+                                                   'no-treatment-calc': None,
+                                                   'ad-only-calc': None,
+                                                   'ad-biogas-upgrading-calc': None,
+                                                   'steam-ad-calc': None,
+                                                   'steam-ad-biogas-upgrading-calc': None}),
 
-    # define the outputs
-    html.Div(id='output_calc_files'),
-    html.Div(id="graph-container"),
-    html.Div(id="test-output")
-])
+        # define the outputs
+        html.Div(id='output_calc_files'),
+        html.Div(id="graph-container"),
+        html.Div(id="test-output")
+    ])
+    return layout
+
+layout = lca_layout()
 
 """ 
 Display a table with the uploaded farm files, when clicking on the show button, Hide when clicking on Hide button
