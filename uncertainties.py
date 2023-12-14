@@ -4,6 +4,7 @@ import os
 import time
 import plotly.graph_objects as go
 import logging
+from scipy.stats import norm
 
 
 
@@ -169,7 +170,7 @@ def create_results_list_monte_carlo(simulation_results_dict, no_treatment, ad_on
 
 
 # Function to generate lognormal distribution based on mean and standard deviation
-def generate_lognormal(mean, std, size):
+def generate_lognormal(mean, std, size = 1):
     """
     Generate a lognormal distribution given the mean, standard deviation and number of samples.
     mean and std could be a single value or an array.
@@ -182,6 +183,93 @@ def generate_lognormal(mean, std, size):
         mu = np.log(mean) - sigma**2 / 2
         return np.random.lognormal(mu, sigma, size)
 
+
+def generate_lognormal_median_k(median, k, size = 1):
+    """
+    Generate a lognormal distribution given the median, dispersion factor k, and number of samples.
+    """
+    if k <= 1:
+        return np.full(size, median)
+    else:
+        sigma = np.log(k)
+        mu = np.log(median)
+        return np.random.lognormal(mu, sigma, size)
+
+
+def generate_lognormal_min_max_median(min_value, max_value, median, size=1):
+    """
+    Generate a lognormal distribution given the minimum, maximum, and median values.
+
+    :param min_value: The minimum value of the distribution
+    :param max_value: The maximum value of the distribution
+    :param median: The median value of the distribution
+    :param size: The number of samples to generate
+    :return: An array of samples from the lognormal distribution
+    """
+    if min_value >= max_value or min_value <= 0:
+        raise ValueError("Invalid min and max values. Ensure min < max and min > 0.")
+
+    # Calculate mu from the median
+    mu = np.log(median)
+
+    # Assume min and max are the 5th and 95th percentiles
+    z_5 = norm.ppf(0.05)  # z-score for 5th percentile
+    z_95 = norm.ppf(0.95)  # z-score for 95th percentile
+
+    # Solving for sigma using min and max values
+    sigma = (np.log(max_value) - np.log(min_value)) / (z_95 - z_5)
+
+    # Generate the lognormal distribution
+    return np.random.lognormal(mu, sigma, size)
+
+
+def generate_lognormal_standard_error_sample_size_median(se, median, n, size=1):
+    """
+    Generate a lognormal distribtion given the standard error and median
+    :param se: standard error of the distribution
+    :param median: median of the distribution
+    :param n: sample size of the data source
+    :param size: the number of samples to generate
+    :return: An array of samples from the lognormal distribution
+    """
+    # Calculate mu from the median
+    mu = np.log(median)
+
+    # Calculate sigma from se
+    sigma = calculate_sigma_from_se(se, n)
+
+    # Generate the lognormal distribution
+    return np.random.lognormal(mu, sigma, size)
+
+
+def generate_lognormal_mu_sigma(mu, sigma, size=1):
+    """
+    Generate a lognormal distribution given the mu and sigma values
+    :param mu: mu of the lognormal distribution
+    :param sigma: sigma of the lognormal distribution
+    :param size: number of samples to generate
+    :return: An arreay of samples from the lognormal distribution
+    """
+
+    # Generate the lognormal distribution
+    return np.random.lognormal(mu, sigma, size)
+
+
+def generate_triangle(min_value, max_value, median, size = 1):
+    """
+    Generate a triangle distribution given the minimum, maximum, and median values.
+    """
+    return np.random.triangular(min_value, median, max_value, size)
+
+
+def calculate_sigma_from_se(se, n):
+    """
+    calculate sigma of a lognormal distribution based on standard error and sample size
+    :param se: standard error
+    :param n: sample size
+    :return: sigma
+    """
+    return se * np.sqrt(n)
 
 
 def substitute_env_config_values(samples_df, default_config, iteration):

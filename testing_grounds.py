@@ -197,6 +197,15 @@ for treatment, variables in prcc_results.items():
 
 """
 
+
+
+
+
+
+"""
+Code for improving efficiency
+
+
 def main():
     # define path to animal and environmental config
     default_animal_config_path = "default_configs/default_animal_config.xlsx"
@@ -227,6 +236,6 @@ def main():
 
 if __name__ == "__main__":
     cProfile.run('main()', 'Debug/profile_output')
-
+"""
 
 
