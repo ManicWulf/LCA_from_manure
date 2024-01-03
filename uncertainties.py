@@ -5,6 +5,7 @@ import time
 import plotly.graph_objects as go
 import logging
 from scipy.stats import norm
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
 
@@ -47,6 +48,8 @@ Change the value for sample_size to adjust the number of simulation runs
 
 
 """
+
+
 # Define the sample_size variable
 sample_size = 100  # You can adjust this value as needed
 
@@ -133,11 +136,6 @@ def lca_calculation(env_config, animal_config, list_farms=None):
     # 6. Calculate biogas upgrading for steam_ad_df
     steam_ad_biogas_df = fc.calc_biogas_upgrading(steam_ad_df, env_config)
     steam_ad_biogas_df = fc.calc_env_impacts(steam_ad_biogas_df, env_config)
-
-    logging.debug(f'Steam AD biogas dataframe for uncertainties: {steam_ad_biogas_df}')
-    logging.debug(f'no treatment dataframe for uncertainties: {no_treatment_df}')
-    logging.debug((f'Env config: {env_config}'))
-    logging.debug(f'animal config: {animal_config}')
 
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -272,6 +270,68 @@ def calculate_sigma_from_se(se, n):
     return se * np.sqrt(n)
 
 
+def extract_uncertainty_parameters(farm_df):
+    """
+    Extracts the uncertainty parameters (pre-storage, post-storage, distance) from a new farm file using the find_value_farm function.
+
+    Parameters:
+    farm_df (DataFrame): The dataframe of a new farm file.
+
+    Returns:
+    dict: A dictionary containing the min, max, and expected values for pre-storage, post-storage, and distance.
+    """
+    uncertainty_params = {}
+
+    # Extract rows for each parameter
+    for param in ['pre_storage', 'post_storage', 'distance']:
+        min_val = dfc.find_value_farm(f'{param}_min', 'additional-data', farm_df)
+        expected_val = dfc.find_value_farm(f'{param}_expected', 'additional-data', farm_df)
+        max_val = dfc.find_value_farm(f'{param}_max', 'additional-data', farm_df)
+
+        # Convert string values to float
+        min_val = int(min_val) if min_val is not None else None
+        expected_val = int(expected_val) if expected_val is not None else None
+        max_val = int(max_val) if max_val is not None else None
+
+        # Store in dictionary
+        uncertainty_params[param] = {
+            'min': min_val,
+            'expected': expected_val,
+            'max': max_val
+        }
+
+    return uncertainty_params
+
+
+
+import numpy as np
+
+def generate_random_values_for_farm(uncertainty_params, num_samples=sample_size):
+    """
+    Generates random values for each uncertainty parameter (pre-storage, post-storage, distance)
+    using a triangular distribution.
+
+    Parameters:
+    uncertainty_params (dict): Dictionary containing the min, max, and expected values for each parameter.
+    num_samples (int): Number of random samples to generate for each parameter.
+
+    Returns:
+    dict: A dictionary containing arrays of generated samples for each parameter.
+    """
+    random_values = {}
+    for param, values in uncertainty_params.items():
+        min_val = values['min']
+        expected_val = values['expected']
+        max_val = values['max']
+
+        # Generate random samples using triangular distribution
+        samples = generate_triangle(min_val, max_val, expected_val, num_samples)
+        random_values[param] = samples
+
+    return random_values
+
+
+
 def substitute_env_config_values(samples_df, default_config, iteration):
     """
     Substitute values in the default environmental configuration with values from a sample row.
@@ -298,7 +358,44 @@ def substitute_env_config_values(samples_df, default_config, iteration):
     return changed_config
 
 
-def create_config_for_simulation(df_animal_samples, df_env_samples, env_config, num_simulations):
+def substitute_farm_files_values(farm_data_dict, farm_samples_dict,n):
+    # Update each farm file with the generated random samples
+    updated_farm_files = []
+    for farm_file_name, farm_df in farm_data_dict.items():
+        farm_samples = farm_samples_dict[farm_file_name]
+        updated_farm_df = update_farm_with_samples(farm_df, farm_samples, n)
+        updated_farm_files.append(updated_farm_df)
+
+
+    return updated_farm_files
+
+
+def single_simulation_run(n, df_animal_samples, df_env_samples, env_config, farm_data_dict, farm_samples_dict):
+    animal_config_df = df_animal_samples.drop_duplicates(subset=['animal_type', 'stable_type'])
+    env_config_df = substitute_env_config_values(df_env_samples, env_config, n)
+    updated_farm_files = substitute_farm_files_values(farm_data_dict, farm_samples_dict,n)
+
+    # Run the LCA calculation and return its result along with the simulation index
+    return n, lca_calculation(env_config_df, animal_config_df, updated_farm_files)
+
+
+def create_config_for_simulation(df_animal_samples, df_env_samples, env_config, num_simulations, list_farms=None, farm_samples_dict=None):
+    simulation_results_dict = {}
+
+    # Use ProcessPoolExecutor to run simulations in parallel
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(single_simulation_run, n, df_animal_samples, df_env_samples, env_config, farm_data_dict, farm_samples_dict)
+                   for n in range(num_simulations)]
+
+        for future in as_completed(futures):
+            n, result = future.result()
+            simulation_results_dict = create_results_list_monte_carlo(simulation_results_dict, *result)
+
+    save_to_hdf5(simulation_results_dict)
+    return simulation_results_dict
+
+
+def create_config_for_simulation_old(df_animal_samples, df_env_samples, env_config, num_simulations, list_farms=None, farm_samples_dict=None):
     simulation_results_dict = {}
     for n in range(num_simulations):
         # Select one sample per unique combination of animal type and manure type
@@ -307,9 +404,13 @@ def create_config_for_simulation(df_animal_samples, df_env_samples, env_config, 
         # If similar logic is needed for environmental samples, do it here
         env_config_df = substitute_env_config_values(df_env_samples, env_config, n)
 
+        # Update each farm file with the generated random samples
+        updated_farm_files = substitute_farm_files_values(farm_data_dict, n)
+
+
         # Use config_df in your model here
 
-        simulation_results_dict = create_results_list_monte_carlo(simulation_results_dict, *lca_calculation(env_config_df, animal_config_df))
+        simulation_results_dict = create_results_list_monte_carlo(simulation_results_dict, *lca_calculation(env_config_df, animal_config_df, updated_farm_files))
 
         # Optionally, save config_df to check its structure
         #animal_config_df.to_excel(f"Monte carlo simulation/animal_config_test{n}.xlsx", index=False)
@@ -318,6 +419,40 @@ def create_config_for_simulation(df_animal_samples, df_env_samples, env_config, 
     save_to_hdf5(simulation_results_dict)
 
     return simulation_results_dict
+
+
+def update_farm_with_samples(farm_df, farm_samples, iteration):
+    """
+    Updates the farm file dataframe with generated random samples for a specific iteration.
+    Creates new rows for 'pre_storage', 'post_storage', and 'distance' if they don't exist.
+
+    Parameters:
+    farm_df (DataFrame): The dataframe of a farm file.
+    farm_samples (dict): Dictionary containing arrays of generated samples for each parameter.
+    iteration (int): The iteration index to select the specific sample.
+
+    Returns:
+    DataFrame: Updated farm file dataframe.
+    """
+    updated_farm_df = farm_df.copy()
+
+    # Update the dataframe with the sample values for the given iteration
+    for param in ['pre_storage', 'post_storage', 'distance']:
+        sample_value = farm_samples[param][iteration]
+        sample_value = int(sample_value)
+
+        # Check if the row exists, and update or create it accordingly
+        if param in updated_farm_df['name'].values:
+            param_row_index = updated_farm_df[updated_farm_df['name'] == param].index
+            updated_farm_df.at[param_row_index[0], 'additional-data'] = sample_value
+        else:
+            # Create a new row for the parameter
+            new_row = pd.DataFrame({'name': [param], 'additional-data': [sample_value]})
+            updated_farm_df = pd.concat([updated_farm_df, new_row], ignore_index=True)
+
+    return updated_farm_df
+
+
 
 
 def plot_histograms_plotly(sim_results_dict, result_key='co2_eq_tot'):
@@ -362,6 +497,212 @@ def plot_histograms_plotly(sim_results_dict, result_key='co2_eq_tot'):
     # Show the plot
     fig.show()
 
+
+def plot_boxplots_plotly(sim_results_dict, result_key='co2_eq_tot'):
+    # Create a Plotly figure
+    fig = go.Figure()
+
+    # Define a list of distinct colors for the boxplots
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+              '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+    # Loop through each treatment in the simulation_results_dict to plot boxplots
+    for i, (treatment, df_list) in enumerate(sim_results_dict.items()):
+        values = [dfc.find_value_in_results_df(df, result_key) for df in df_list]
+        fig.add_trace(go.Box(
+            y=values,
+            name=treatment,
+            marker_color=colors[i % len(colors)]  # Assign color from the list
+        ))
+
+    # Update layout for the figure
+    fig.update_layout(
+        title=f'Boxplots of CO2 Equivalents Total for Different Treatments with {sample_size} Simulations',
+        yaxis_title='CO2 Equivalents Total',
+        xaxis_title='Treatment',
+        boxmode='group'  # Group boxplots by treatment
+    )
+
+    # Show the plot
+    fig.show()
+
+
+def plot_violin_plots_plotly(sim_results_dict, result_key='co2_eq_tot'):
+    # Create a Plotly figure
+    fig = go.Figure()
+
+    # Define a list of distinct colors for the violin plots
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+              '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+    # Loop through each treatment in the simulation_results_dict to plot violin plots
+    for i, (treatment, df_list) in enumerate(sim_results_dict.items()):
+        values = [dfc.find_value_in_results_df(df, result_key) for df in df_list]
+        fig.add_trace(go.Violin(
+            y=values,
+            name=treatment,
+            line_color=colors[i % len(colors)],  # Assign color from the list
+            box_visible=True,  # Show the inner boxplot inside the violin
+            meanline_visible=True  # Show the mean line inside the violin
+        ))
+
+    # Update layout for the figure
+    fig.update_layout(
+        title=f'Violin Plots of CO2 Equivalents Total for Different Treatments with {sample_size} Simulations',
+        yaxis_title='CO2 Equivalents Total',
+        xaxis_title='Treatment',
+        violinmode='group'  # Group violin plots by treatment
+    )
+
+    # Show the plot
+    fig.show()
+
+
+def plot_violin_plots_with_quotients_plotly(sim_results_dict, result_key='co2_eq_tot', comparison_scenario='no_treatment'):
+
+    # Create a Plotly figure
+    fig = go.Figure()
+
+    # Extract the comparison data for the specified scenario
+    comparison_data = [dfc.find_value_in_results_df(df, result_key) for df in sim_results_dict.get(comparison_scenario, [])]
+    comparison_mean = np.mean(comparison_data)
+
+    # Define a list of distinct colors for the violin plots
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+              '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+    # Loop through each scenario and compare it to the comparison_scenario
+    for i, (scenario, df_list) in enumerate(sim_results_dict.items()):
+        if scenario != comparison_scenario:
+            values = [dfc.find_value_in_results_df(df, result_key) / comparison_mean for df in df_list]
+            fig.add_trace(go.Violin(
+                y=values,
+                name=f"{scenario}/{comparison_scenario}",
+                line_color=colors[i % len(colors)],
+                box_visible=True,
+                meanline_visible=True
+            ))
+
+    # Add a horizontal line at Y=1
+    fig.add_shape(
+        type="line",
+        x0=-0.5,  # Adjust x0 and x1 to ensure the line spans across the entire plot
+        y0=1,
+        x1=len(sim_results_dict.items()) - 0.5,
+        y1=1,
+        line=dict(
+            color="Red",
+            width=4,
+            dash="dashdot",
+        ),
+    )
+
+    # Update layout for the figure
+    fig.update_layout(
+        title=f'Violin Plots of Quotients Compared to {comparison_scenario}',
+        yaxis_title='Q = Xi / Xcomparison',
+        xaxis_title='Scenario',
+        violinmode='group',
+        showlegend=True
+    )
+
+    # Show the plot
+    fig.show()
+
+
+def plot_source_contributions_violin(sim_results_dict, source_columns):
+    import plotly.graph_objects as go
+
+    for scenario, df_list in sim_results_dict.items():
+        # Create a new figure for each scenario
+        fig = go.Figure()
+
+        for source in source_columns:
+            # Extract data for each source
+            source_data = [dfc.find_value_in_results_df(df, source) for df in df_list]
+
+            # Add a violin plot for this source
+            fig.add_trace(go.Violin(
+                y=source_data,
+                x=[source] * len(source_data),
+                name=f"{source}",
+                box_visible=True,
+                meanline_visible=True
+            ))
+
+        # Update layout for each scenario's figure
+        fig.update_layout(
+            title=f'Source Contributions to CO2 Equivalent in {scenario} Scenario',
+            yaxis_title='Contribution',
+            xaxis_title='Source',
+            violinmode='group',
+            showlegend=True
+        )
+
+        # Show the plot
+        fig.show()
+
+
+def plot_relative_source_contributions_violin(sim_results_dict, source_columns, total_impact_key):
+    import plotly.graph_objects as go
+
+    # Define a color palette
+    color_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+                     '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#17becf', '#9edae5']
+
+    # Create a color mapping for each source
+    color_mapping = {source: color_palette[i % len(color_palette)] for i, source in enumerate(source_columns)}
+
+    for scenario, df_list in sim_results_dict.items():
+        # Create a new figure for each scenario
+        fig = go.Figure()
+
+        # Extract total impact for the scenario
+        total_impact_data = [dfc.find_value_in_results_df(df, total_impact_key) for df in df_list]
+
+        for source in source_columns:
+            # Extract data for each source
+            source_data = [dfc.find_value_in_results_df(df, source) for df in df_list]
+
+            # Calculate the relative contribution of each source to the total impact
+            relative_contributions = [100 * (source_value / total_impact) if total_impact else 0 for
+                                      source_value, total_impact in zip(source_data, total_impact_data)]
+
+            # Check if the total contribution for this source is zero across all data points
+            if not any(relative_contributions):
+                continue  # Skip this source as its contribution is zero
+
+            # Add a violin plot for this source's relative contribution
+            fig.add_trace(go.Violin(
+                y=relative_contributions,
+                x=[source] * len(relative_contributions),
+                name=f"{source}",
+                line_color=color_mapping[source],  # Use the color mapping
+                box_visible=True,
+                meanline_visible=True
+            ))
+
+        # Update layout for each scenario's figure
+        fig.update_layout(
+            title=f'Relative Source Contributions to Total {total_impact_key} in {scenario} Scenario',
+            yaxis_title='Contribution (%)',
+            xaxis_title='Source',
+            violinmode='group',
+            showlegend=True
+        )
+
+        # Show the plot
+        fig.show()
+
+
+# list with sources of CO2 eq. emissions for source contribution
+co2_sources_list = ["co2_methane_pre_storage", "co2_methane_post_storage", "co2_methane_ad",
+                    "co2_methane_biogas_upgrading", "co2_n2o_pre_storage", "co2_n2o_post_storage",
+                    "co2_n2o_field", "co2_electricity_demand_ad", "co2_electricity_demand_biogas_upgrading",
+                    "co2_heat_oil", "co2_transport", "co2_ad_construction", "co2_chp_construction"]
+
+
+
 if __name__ == "__main__":
 
     # Read the configuration files
@@ -399,6 +740,17 @@ if __name__ == "__main__":
         samples = generate_lognormal(row['value'], row['stdev'], sample_size)
         env_samples[param_name] = samples
 
+        # Assume farm_data_df_list is a list of dataframes, each representing a farm file
+    farm_data_dict = {file_name: dfc.read_file_to_dataframe(os.path.join(farm_files_path, file_name))
+                      for file_name in farm_paths_list}
+
+    # Generate random samples for each farm file
+    farm_samples_dict = {}
+    for farm_file_name, farm_df in farm_data_dict.items():
+        uncertainty_params = extract_uncertainty_parameters(farm_df)
+        farm_samples = generate_random_values_for_farm(uncertainty_params, sample_size)
+        farm_samples_dict[farm_file_name] = farm_samples
+
     # Convert the samples dictionaries to DataFrames
     df_env_samples = pd.DataFrame(env_samples)
     df_animal_samples = pd.DataFrame(all_samples)
@@ -412,11 +764,18 @@ if __name__ == "__main__":
 
 
 
-    simulation_results_dict = create_config_for_simulation(df_animal_samples, df_env_samples, env_config, sample_size)
-    sim_results_dict_test = load_from_hdf5()
-    write_dict_to_csv(simulation_results_dict, 'Debug/no_hdf5.csv')
-    write_dict_to_csv(sim_results_dict_test, 'Debug/hdf5.csv')
-    plot_histograms_plotly(sim_results_dict_test)
+    simulation_results_dict = create_config_for_simulation(df_animal_samples, df_env_samples, env_config, sample_size, farm_data_df_list, farm_samples_dict)
+    #sim_results_dict_test = load_from_hdf5()
+    #write_dict_to_csv(simulation_results_dict, 'Debug/no_hdf5.csv')
+    #write_dict_to_csv(sim_results_dict_test, 'Debug/hdf5.csv')
+    """plot_violin_plots_plotly(simulation_results_dict)
+    plot_violin_plots_with_quotients_plotly(simulation_results_dict)
+    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="ad_only")
+    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="ad_biogas")
+    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad")
+    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad_biogas")"""
+    #plot_source_contributions_violin(simulation_results_dict, co2_sources_list)
+    plot_relative_source_contributions_violin(simulation_results_dict, co2_sources_list, "co2_eq_tot")
 
 
 

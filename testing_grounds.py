@@ -13,7 +13,7 @@ import dash_functions_and_callbacks as dfc
 import uncertainties
 
 
-"""
+
 # define path to farm files folder and create list with dataframes from the farm files
 farm_files_path = "farm files/"
 farm_paths_list = os.listdir(farm_files_path)
@@ -195,7 +195,6 @@ for treatment, variables in prcc_results.items():
     plt.savefig(f'Debug/prcc_plot_{treatment}.png')  # Change the path if necessary
     plt.show()
 
-"""
 
 
 

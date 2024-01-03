@@ -194,6 +194,8 @@ calc_values_env_impact = ["co2_methane_pre_storage", "co2_methane_post_storage",
                           "co2_ad_construction", "co2_chp_construction",
                           "co2_eq_tot"]
 
+
+
 calc_values_needed = (calc_values_general + calc_values_pre_storage_transport + calc_values_post_storage_field +
                       calc_values_ad + calc_values_biogas_upgrading + calc_values_energy + calc_values_env_impact)
 

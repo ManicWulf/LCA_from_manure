@@ -559,8 +559,6 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
                 manure_tot += (manure_methane_dict['manure_solid'] + manure_methane_dict['manure_liquid'] +
                                manure_methane_dict['manure_straw'])
 
-
-
                 # add up methane potential and total manure
                 add_dict_to_results(results_df, manure_methane_dict)
 
@@ -572,7 +570,6 @@ def calc_single_farm(results_df, farm_data, animal_config, env_config):
 
                 manure_tot += (manure_methane_dict['manure_solid'] + manure_methane_dict['manure_liquid'] +
                                manure_methane_dict['manure_straw'])
-
 
                 # add up methane potential and total manure
                 add_dict_to_results(results_df, manure_methane_dict)
