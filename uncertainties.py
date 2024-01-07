@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.DEBUG,
 # define path to animal and environmental config
 default_animal_config_path = "default_configs/default_animal_config.xlsx"
 default_environmental_config_path = "default_configs/default_environmental_config.xlsx"
+combined_config = 'default_configs/updated_combined_config.xlsx'
 
 # define path to farm files folder and create list with dataframes from the farm files
 farm_files_path = "farm files/"
@@ -115,6 +116,16 @@ def lca_calculation(env_config, animal_config, list_farms=None):
     # 2. Perform the no-treatment calculations using farm_animal_calc
     no_treatment_df = fc.post_storage_and_field_emissions(farm_animal_calc, env_config, False)
     no_treatment_df = fc.calc_env_impacts(no_treatment_df, env_config)
+    """
+    overwrite the nitrogen values with no_treatment values
+    """
+    list_nitrogen = ["co2_n2o_post_storage_untreated", "co2_n2o_field_untreated", "co2_n2o_tot_untreated",
+                     'n2o_emissions_post_storage_untreated', 'n2o_emissions_field_untreated', 'n2o_emissions_untreated',
+                     'nh3_emissions_post_storage_untreated', "nh3_emissions_field_untreated", 'nh3_emissions_untreated',
+                     'co2_eq_tot_untreated']
+    for key in list_nitrogen:
+        new_key = key.replace('_untreated', '')
+        dfc.store_value_in_results_df(no_treatment_df, new_key, 'value', dfc.find_value_in_results_df(no_treatment_df, key))
 
     # 3. Perform AD only calculations
     ad_only_df = fc.calc_anaerobic_digestion(farm_animal_calc, env_config)
@@ -768,14 +779,14 @@ if __name__ == "__main__":
     #sim_results_dict_test = load_from_hdf5()
     #write_dict_to_csv(simulation_results_dict, 'Debug/no_hdf5.csv')
     #write_dict_to_csv(sim_results_dict_test, 'Debug/hdf5.csv')
-    """plot_violin_plots_plotly(simulation_results_dict)
-    plot_violin_plots_with_quotients_plotly(simulation_results_dict)
+    plot_violin_plots_plotly(simulation_results_dict)
+    """plot_violin_plots_with_quotients_plotly(simulation_results_dict)
     plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="ad_only")
     plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="ad_biogas")
     plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad")
     plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad_biogas")"""
     #plot_source_contributions_violin(simulation_results_dict, co2_sources_list)
-    plot_relative_source_contributions_violin(simulation_results_dict, co2_sources_list, "co2_eq_tot")
+    #plot_relative_source_contributions_violin(simulation_results_dict, co2_sources_list, "co2_eq_tot")
 
 
 

@@ -166,16 +166,20 @@ Then create a dataframe with the list elements as the first column.
 """
 
 calc_values_general = ["manure_solid", "manure_liquid", "manure_straw", "methane_solid", "methane_liquid",
-                       "methane_straw", "methane_tot", "methane_emissions", "nh3_emissions", "n2o_emissions", "n_tot",
+                       "methane_straw", "methane_tot", "methane_emissions", "nh3_emissions", "n2o_emissions",
+                       'nh3_emissions_untreated', 'n2o_emissions_untreated', "n_tot",
                        "sum_post_storage_time", "c_tot", "c_tot_solid", "c_tot_liquid", "c_tot_straw", "methane_emissions_solid",
                        "methane_emissions_liquid", "methane_emissions_straw", "manure_tot"]
 
 calc_values_pre_storage_transport = ["methane_solid_pre_storage", "methane_liquid_pre_storage", "methane_straw_pre_storage",
                                      "methane_tot_pre_storage", "n_tot_pre_storage", "c_tot_pre_storage",
-                                     "methane_emissions_pre_storage", "nh3_emissions_pre_storage", "n2o_emissions_pre_storage"]
+                                     "methane_emissions_pre_storage", "nh3_emissions_pre_storage", "n2o_emissions_pre_storage",
+                                     'nh3_emissions_pre_storage_untreated']
 
-calc_values_post_storage_field = ["nh3_emissions_post_storage", "n2o_emissions_post_storage",
-                                  "methane_emissions_post_storage", "nh3_emissions_field", "n2o_emissions_field"]
+calc_values_post_storage_field = ["nh3_emissions_post_storage", "n2o_emissions_post_storage", 'nh3_emissions_post_storage_untreated',
+                                  'n2o_emissions_post_storage_untreated', 'n_tot_post_storage_untreated',
+                                  "methane_emissions_post_storage", "nh3_emissions_field", "n2o_emissions_field",
+                                  "nh3_emissions_field_untreated", "n2o_emissions_field_untreated"]
 
 calc_values_ad = ["c_tot_ad", "methane_yield", "methane_emissions_ad", "methane_to_chp", "effective_methane_after_ad",
                   ]
@@ -188,11 +192,12 @@ calc_values_energy = ["heat_demand_ad", "electricity_demand_ad", "electricity_de
 
 calc_values_env_impact = ["co2_methane_pre_storage", "co2_methane_post_storage", "co2_methane_field", "co2_methane_ad", "co2_methane_biogas_upgrading",
                           "co2_methane_tot", "co2_n2o_pre_storage", "co2_n2o_post_storage", "co2_n2o_ad", "co2_n2o_biogas_upgrading",
-                          "co2_n2o_field", "co2_n2o_tot", "co2_electricity_mix", "co2_electricity_demand_ad", "co2_electricity_demand_biogas_upgrading",
-                          "co2_electricity_demand_tot", "co2_heat_oil",
+                          "co2_n2o_field", "co2_n2o_tot", "co2_n2o_post_storage_untreated", "co2_n2o_field_untreated",
+                          "co2_n2o_tot_untreated", "co2_electricity_mix", "co2_electricity_demand_ad",
+                          "co2_electricity_demand_biogas_upgrading", "co2_electricity_demand_tot", "co2_heat_oil",
                           "co2_transport", "ubp_nh3", "ubp_co2", "ubp_electricity_demand_renew", "ubp_electricity_demand_non_renew",
                           "co2_ad_construction", "co2_chp_construction",
-                          "co2_eq_tot"]
+                          "co2_eq_tot", 'co2_eq_tot_untreated']
 
 
 
