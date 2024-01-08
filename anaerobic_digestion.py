@@ -21,7 +21,8 @@ def get_seconds_per_year(env_config):
 
 def get_biogas_composition(env_config):
     ch4_content = dfc.find_value_env_config("methane_biogas", "value", env_config)
-    co2_content = dfc.find_value_env_config("co2_biogas", "value", env_config)
+    co2_content = 1 - ch4_content
+    #co2_content = dfc.find_value_env_config("co2_biogas", "value", env_config)
     return ch4_content, co2_content
 
 

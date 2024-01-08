@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.DEBUG,
 # define path to animal and environmental config
 default_animal_config_path = "default_configs/default_animal_config.xlsx"
 default_environmental_config_path = "default_configs/default_environmental_config.xlsx"
-combined_config = 'default_configs/updated_combined_config.xlsx'
+combined_config_path = 'default_configs/updated_combined_config.xlsx'
 
 # define path to farm files folder and create list with dataframes from the farm files
 farm_files_path = "farm files/"
@@ -52,7 +52,7 @@ Change the value for sample_size to adjust the number of simulation runs
 
 
 # Define the sample_size variable
-sample_size = 100  # You can adjust this value as needed
+sample_size = 10  # You can adjust this value as needed
 
 
 def write_dict_to_csv(simulation_results_dict, file_path):
@@ -314,9 +314,6 @@ def extract_uncertainty_parameters(farm_df):
     return uncertainty_params
 
 
-
-import numpy as np
-
 def generate_random_values_for_farm(uncertainty_params, num_samples=sample_size):
     """
     Generates random values for each uncertainty parameter (pre-storage, post-storage, distance)
@@ -369,6 +366,38 @@ def substitute_env_config_values(samples_df, default_config, iteration):
     return changed_config
 
 
+def substitute_animal_config_values(samples_df, default_config, iteration):
+    """
+    Substitute values in the default animal configuration with values from a sample row.
+
+    :param samples_df: The generated samples dataframe for animals.
+    :param default_config: The default animal configuration dataframe.
+    :param iteration: Index of the row in samples_df to use for substitution.
+    :return: A new dataframe with substituted values.
+    """
+    changed_config = default_config.copy()
+
+    # Extract the sample row for the specific iteration
+    sample_row = samples_df.iloc[iteration]
+
+    # Iterate over each parameter in the default config and substitute if applicable
+    for index, row in changed_config.iterrows():
+        animal_type = row['animal_type']
+        stable_type = row['stable_type']
+
+        # Construct the parameter name to match with the sample dataframe
+        for param in default_config.columns[2:]:  # Assuming the first two columns are 'animal_type' and 'stable_type'
+            param_name = f"{param}"  # Adjust this if the naming convention is different in the sample dataframe
+            if param_name in sample_row:
+                changed_config.at[index, param] = sample_row[param_name]
+
+    return changed_config
+
+
+
+
+
+
 def substitute_farm_files_values(farm_data_dict, farm_samples_dict,n):
     # Update each farm file with the generated random samples
     updated_farm_files = []
@@ -381,21 +410,28 @@ def substitute_farm_files_values(farm_data_dict, farm_samples_dict,n):
     return updated_farm_files
 
 
-def single_simulation_run(n, df_animal_samples, df_env_samples, env_config, farm_data_dict, farm_samples_dict):
-    animal_config_df = df_animal_samples.drop_duplicates(subset=['animal_type', 'stable_type'])
+def single_simulation_run(n, df_animal_samples, df_env_samples, env_config, animal_config, farm_data_dict, farm_samples_dict):
+    animal_config_df = substitute_animal_config_values(df_animal_samples, animal_config, n)
     env_config_df = substitute_env_config_values(df_env_samples, env_config, n)
     updated_farm_files = substitute_farm_files_values(farm_data_dict, farm_samples_dict,n)
+
+    animal_config_df.to_excel(f"Debug/animal_config_df_{n}.xlsx", index=False)
+    env_config_df.to_excel(f"Debug/env_config_df_{n}.xlsx", index=False)
+
 
     # Run the LCA calculation and return its result along with the simulation index
     return n, lca_calculation(env_config_df, animal_config_df, updated_farm_files)
 
 
-def create_config_for_simulation(df_animal_samples, df_env_samples, env_config, num_simulations, list_farms=None, farm_samples_dict=None):
+def create_config_for_simulation(df_animal_samples, df_env_samples, env_config, animal_config, num_simulations, list_farms=None, farm_samples_dict=None):
     simulation_results_dict = {}
+
+    df_animal_samples.to_excel("Debug/df_animal_samples.xlsx", index=False)
+    df_env_samples.to_excel("Debug/df_env_samples.xlsx", index=False)
 
     # Use ProcessPoolExecutor to run simulations in parallel
     with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(single_simulation_run, n, df_animal_samples, df_env_samples, env_config, farm_data_dict, farm_samples_dict)
+        futures = [executor.submit(single_simulation_run, n, df_animal_samples, df_env_samples, env_config, animal_config, farm_data_dict, farm_samples_dict)
                    for n in range(num_simulations)]
 
         for future in as_completed(futures):
@@ -462,6 +498,87 @@ def update_farm_with_samples(farm_df, farm_samples, iteration):
             updated_farm_df = pd.concat([updated_farm_df, new_row], ignore_index=True)
 
     return updated_farm_df
+
+
+def split_combined_config(combined_config):
+    """
+    Splits the combined configuration into environmental and animal configurations.
+
+    Parameters:
+    combined_config (DataFrame): The combined configuration DataFrame.
+
+    Returns:
+    tuple: A tuple containing two DataFrames (environmental configuration, animal configuration).
+    """
+    # Criteria for identifying animal configuration rows
+    animal_config_pattern = r'_0_|_1_|_2_'
+
+    # Environmental Configuration: Exclude rows that match the animal configuration pattern
+    env_config_columns = ['name', 'median', 'upper', 'lower', 'sigma', 'mu', 'Distribution function']
+    env_config = combined_config[~combined_config['name'].str.contains(animal_config_pattern, na=False)]
+    env_config = env_config[env_config_columns]
+
+    # Animal Configuration: Include only rows that match the animal configuration pattern
+    animal_config = combined_config[combined_config['name'].str.contains(animal_config_pattern, na=False)]
+
+    # Exporting environmental configuration to Excel for debugging
+    env_config.to_excel("Debug/env_config_extracted.xlsx", index=False)
+
+    return env_config, animal_config
+
+
+def transform_animal_config(animal_config):
+    """
+    Transforms the animal configuration to include mu and sigma for each parameter,
+    split by animal type and stable type, with mu and sigma columns adjacent to each other.
+
+    Parameters:
+    animal_config (DataFrame): The animal configuration DataFrame.
+
+    Returns:
+    DataFrame: The transformed animal configuration DataFrame.
+    """
+    # Create a copy to avoid modifying the original DataFrame
+    animal_config_copy = animal_config.copy()
+
+    # Define a function to extract the animal type, stable type, and parameter
+    def extract_info(name):
+        parts = name.split('_')
+        # Find the index of the stable type (always a single digit)
+        stable_type_idx = next(i for i, part in enumerate(parts) if part in ['0', '1', '2'])
+        animal_type = '_'.join(parts[:stable_type_idx])
+        stable_type = parts[stable_type_idx]
+        parameter = '_'.join(parts[stable_type_idx + 1:])
+        return animal_type, stable_type, parameter
+
+    # Apply the function to each row in the DataFrame
+    extracted_info = animal_config_copy['name'].apply(
+        lambda x: pd.Series(extract_info(x), index=['animal_type', 'stable_type', 'parameter']))
+    animal_config_copy = pd.concat([animal_config_copy, extracted_info], axis=1)
+
+    # Pivot the DataFrame to create mu and sigma columns for each parameter
+    animal_config_pivoted = animal_config_copy.pivot_table(
+        index=['animal_type', 'stable_type'],
+        columns='parameter',
+        values=['mu', 'sigma'],
+        aggfunc='first'
+    )
+
+    # Flatten the MultiIndex in columns
+    animal_config_pivoted.columns = ['_'.join(col[::-1]) for col in animal_config_pivoted.columns]
+
+    # Reorder columns so that each mu_parameter is next to its corresponding sigma_parameter
+    sorted_columns = sorted(animal_config_pivoted.columns, key=lambda x: (x.split('_')[1], x.split('_')[0]))
+    animal_config_pivoted = animal_config_pivoted[sorted_columns]
+
+    animal_config_pivoted.reset_index(inplace=True)
+
+    animal_config_pivoted.to_excel("Debug/animal_config_pivoted.xlsx", index=False)
+
+    return animal_config_pivoted
+
+
+
 
 
 
@@ -716,7 +833,7 @@ co2_sources_list = ["co2_methane_pre_storage", "co2_methane_post_storage", "co2_
 
 if __name__ == "__main__":
 
-    # Read the configuration files
+    """# Read the configuration files
     animal_config = dfc.read_file_to_dataframe(default_animal_config_path)
     env_config = dfc.read_file_to_dataframe(default_environmental_config_path)
 
@@ -724,31 +841,75 @@ if __name__ == "__main__":
     stdev_cols_animal = [col for col in animal_config.columns if "stdev" in col]
     value_cols_animal = [col.replace("stdev_", "") for col in stdev_cols_animal]
     animal_parameters_to_sample = animal_config[animal_config[stdev_cols_animal].sum(axis=1) != 0]
-    env_parameters_to_sample = env_config[env_config['stdev'] != 0]
+    env_parameters_to_sample = env_config[env_config['stdev'] != 0]"""
+
+    # Read the combined configuration file
+    combined_config = dfc.read_file_to_dataframe(combined_config_path)
 
 
-    # Create a list to store rows of the new DataFrame
-    all_samples = []
+    # Splitting the combined configuration
+    default_animal_config = dfc.read_file_to_dataframe(default_animal_config_path)
+    default_env_config = dfc.read_file_to_dataframe(default_environmental_config_path)
+
+    env_config_df, animal_config_df = split_combined_config(combined_config)
+    animal_config_df = transform_animal_config(animal_config_df)
+
+    # For Animal Configuration
+    # We want to make sure that both mu and sigma are non-zero for a parameter.
+    animal_parameters_to_sample = animal_config_df.loc[
+        (animal_config_df.filter(regex='_mu$').ne(0) & animal_config_df.filter(regex='_sigma$').ne(0)).all(axis=1)
+    ]
+
+    # For Environmental Configuration
+    env_parameters_to_sample = env_config_df.loc[
+        ~env_config_df['Distribution function'].str.lower().eq('none') & (
+                (env_config_df['Distribution function'].str.lower().eq('triangle') &
+                 env_config_df[['upper', 'lower', 'median']].notna().all(axis=1)) |
+                (env_config_df['Distribution function'].str.lower().eq('lognormal') &
+                 env_config_df[['sigma', 'mu']].notna().all(axis=1))
+        )
+        ]
+
+    # Create a dictionary for fast retrieval of mu and sigma values
+    mu_sigma_dict = {}
+    for _, row in animal_config_df.iterrows():
+        animal_type = row['animal_type']
+        stable_type = row['stable_type']
+        for col in animal_config_df.columns:
+            if col.endswith("_mu") or col.endswith("_sigma"):
+                param_base = col.rsplit("_", 1)[0]  # Extract base parameter name
+                key = (animal_type, stable_type, param_base)
+                mu_sigma_dict[key] = (row[f"{param_base}_mu"], row[f"{param_base}_sigma"])
+
+    # Create a list to store samples for animal configuration
+    animal_samples = []
 
     # Iterate over each row in animal_config
-    for index, row in animal_config.iterrows():
-        # For each set of samples
+    for index, row in animal_config_df.iterrows():
         for _ in range(sample_size):
-            sample_data = {
-                'animal_type': row['animal_type'],
-                'stable_type': row['stable_type']
-            }
-            # For each stdev and value column pair, generate a sample and add it to the sample_data dictionary
-            for stdev_col, value_col in zip(stdev_cols_animal, value_cols_animal):
-                sample_data[value_col] = generate_lognormal(row[value_col], row[stdev_col], 1)[0]
-            # Add the sample_data dictionary to the all_samples list
-            all_samples.append(sample_data)
+            sample_data = {'animal_type': row['animal_type'], 'stable_type': row['stable_type']}
+
+            # Iterate over each parameter in animal_config
+            for param_base in set(
+                    col.rsplit("_", 1)[0] for col in animal_config_df.columns if "_mu" in col or "_sigma" in col):
+                key = (row['animal_type'], row['stable_type'], param_base)
+                if key in mu_sigma_dict:
+                    mu_value, sigma_value = mu_sigma_dict[key]
+                    if mu_value and sigma_value:
+                        sample_value = generate_lognormal_mu_sigma(mu_value, sigma_value, 1)[0]
+                        sample_data[param_base] = sample_value
+
+            animal_samples.append(sample_data)
 
     # Generate samples for environmental parameters
     env_samples = {}
     for _, row in env_parameters_to_sample.iterrows():
         param_name = row['name']
-        samples = generate_lognormal(row['value'], row['stdev'], sample_size)
+        dist_function = row['Distribution function'].lower()
+        if dist_function == 'lognormal':
+            samples = generate_lognormal_mu_sigma(row['mu'], row['sigma'], sample_size)
+        elif dist_function == 'triangle':
+            samples = generate_triangle(row['lower'], row['upper'], row['median'], sample_size)
         env_samples[param_name] = samples
 
         # Assume farm_data_df_list is a list of dataframes, each representing a farm file
@@ -764,7 +925,7 @@ if __name__ == "__main__":
 
     # Convert the samples dictionaries to DataFrames
     df_env_samples = pd.DataFrame(env_samples)
-    df_animal_samples = pd.DataFrame(all_samples)
+    df_animal_samples = pd.DataFrame(animal_samples)
 
     # Save the samples to Excel files
     df_animal_samples.to_excel("monte_carlo_simulation/saved_animal_samples.xlsx", index=False)
@@ -775,18 +936,18 @@ if __name__ == "__main__":
 
 
 
-    simulation_results_dict = create_config_for_simulation(df_animal_samples, df_env_samples, env_config, sample_size, farm_data_df_list, farm_samples_dict)
+    simulation_results_dict = create_config_for_simulation(df_animal_samples, df_env_samples, default_env_config, default_animal_config,sample_size, farm_data_df_list, farm_samples_dict)
     #sim_results_dict_test = load_from_hdf5()
     #write_dict_to_csv(simulation_results_dict, 'Debug/no_hdf5.csv')
     #write_dict_to_csv(sim_results_dict_test, 'Debug/hdf5.csv')
     plot_violin_plots_plotly(simulation_results_dict)
-    """plot_violin_plots_with_quotients_plotly(simulation_results_dict)
+    plot_violin_plots_with_quotients_plotly(simulation_results_dict)
     plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="ad_only")
     plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="ad_biogas")
     plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad")
-    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad_biogas")"""
+    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad_biogas")
     #plot_source_contributions_violin(simulation_results_dict, co2_sources_list)
-    #plot_relative_source_contributions_violin(simulation_results_dict, co2_sources_list, "co2_eq_tot")
+    plot_relative_source_contributions_violin(simulation_results_dict, co2_sources_list, "co2_eq_tot")
 
 
 
