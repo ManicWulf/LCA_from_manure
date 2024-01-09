@@ -14,30 +14,49 @@ get necessary values from env_config file for calculations
 
 def get_acc_nitrogen_factor_manure(env_config):
     "accessible nitrogen in manure"
-    return dfc.find_value_env_config("factor_n_acc_manure", "value", env_config)
+    ef = dfc.find_value_env_config("factor_n_acc_manure", "value", env_config)
+    if ef >= 1:
+        ef = 1
+    return ef
+
 
 
 def get_acc_nitrogen_factor_digestate(env_config):
     "accessible nitrogen in digestate"
-    return dfc.find_value_env_config("factor_n_acc_digestate", "value", env_config)
+    ef = dfc.find_value_env_config("factor_n_acc_digestate", "value", env_config)
+    if ef >= 1:
+        ef = 1
+    return ef
+
 
 
 def get_nh3_field_emissions_factor(env_config):
-    return dfc.find_value_env_config("factor_nh3_emission_field", "value", env_config)
+    ef = dfc.find_value_env_config("factor_nh3_emission_field", "value", env_config)
+    if ef >= 1:
+        ef = 1
+    return ef
+
 
 
 def get_n2o_field_emissions_factor(env_config):
-    return dfc.find_value_env_config("factor_n2o_emission_field", "value", env_config)
+    ef = dfc.find_value_env_config("factor_n2o_emission_field", "value", env_config)
+    if ef >= 1:
+        ef = 1
+    return ef
 
 
 def get_field_application_factor(env_config, application_method):
     """get the field application factor, for reducing emissions based on application method"""
     if 'shoe' in application_method:
-        return dfc.find_value_env_config("factor_field_application_trailing_shoe", "value", env_config)
+        ef = dfc.find_value_env_config("factor_field_application_trailing_shoe", "value", env_config)
     elif 'hose' in application_method:
-        return dfc.find_value_env_config("factor_field_application_trailing_hose", "value", env_config)
+        ef = dfc.find_value_env_config("factor_field_application_trailing_hose", "value", env_config)
     else:
-        return dfc.find_value_env_config("factor_field_application_splash_plate", "value", env_config)
+        ef = dfc.find_value_env_config("factor_field_application_splash_plate", "value", env_config)
+    if ef >= 1:
+        ef = 1
+    return ef
+
 
 
 """

@@ -8,7 +8,7 @@ import dash_functions_and_callbacks as dfc
 
 def get_biogas_composition(env_config):
     ch4_content = dfc.find_value_env_config("methane_biogas", "value", env_config)
-    co2_content = dfc.find_value_env_config("co2_biogas", "value", env_config)
+    co2_content = 1 - ch4_content
     return ch4_content, co2_content
 
 
@@ -33,19 +33,20 @@ def get_offgas_ch4_content(env_config):
 
 
 def get_offgas_co2_content(env_config):
-    return dfc.find_value_env_config("co2_content_offgas_upgrading", "value", env_config)
-
-
-def get_co2_content_upgraded(env_config):
-    return dfc.find_value_env_config("co2_content_upgraded", "value", env_config)
+    return 1 - get_offgas_ch4_content(env_config)
 
 
 def get_methane_content_upgraded(env_config):
     return dfc.find_value_env_config("methane_content_upgraded", "value", env_config)
 
 
+def get_co2_content_upgraded(env_config):
+    return 1 - get_methane_content_upgraded(env_config)
+
+
 def get_biomethane_ch4_to_co2_ratio(env_config):
-    return dfc.find_value_env_config("biomethane_ch4_to_co2_ratio", "value", env_config)
+    ratio = get_methane_content_upgraded(env_config) / get_co2_content_upgraded(env_config)
+    return ratio
 
 
 

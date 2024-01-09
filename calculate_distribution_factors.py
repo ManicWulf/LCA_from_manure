@@ -7,7 +7,8 @@ def calculate_mu_sigma_with_median(row):
 
         # Case 1: Using upper and lower boundaries
         if not np.isnan(row['upper']) and not np.isnan(row['lower']):
-            sigma = np.sqrt(np.log(row['upper'] / row['lower'])) / 2
+            # The factor of 1.96 comes from the z-score for a 97.5th percentile in a standard normal distribution
+            sigma = np.sqrt(np.log(row['upper'] / row['lower'])) / (2 * 1.96)
 
         # Case 2: Using stdev95
         elif not np.isnan(row['stdev95']):
@@ -30,7 +31,7 @@ def calculate_mu_sigma_with_median(row):
 
 def main():
     # File paths
-    original_file_path = 'default_configs/combined_config.xlsx'  # Replace with your file path
+    original_file_path = 'default_configs/updated_combined_config.xlsx'  # Replace with your file path
     updated_file_path = 'default_configs/updated_combined_config.xlsx'  # Replace with your desired output path
 
     # Load the Excel file

@@ -52,7 +52,7 @@ Change the value for sample_size to adjust the number of simulation runs
 
 
 # Define the sample_size variable
-sample_size = 10  # You can adjust this value as needed
+sample_size = 1000  # You can adjust this value as needed
 
 
 def write_dict_to_csv(simulation_results_dict, file_path):
@@ -81,9 +81,8 @@ def save_to_hdf5(simulation_results_dict, filename="simulation_results.h5"):
 
 
 
-def load_from_hdf5(filename="simulation_results.h5"):
+def load_from_hdf5(filepath='monte_carlo_simulation/simulation_results.h5'):
     results = {}
-    filepath = f'monte_carlo_simulation/{filename}'
     with pd.HDFStore(filepath, mode='r') as store:
         # Custom sorting function to handle the new key format
         def sorting_key_func(x):
@@ -666,33 +665,66 @@ def plot_violin_plots_plotly(sim_results_dict, result_key='co2_eq_tot'):
     # Loop through each treatment in the simulation_results_dict to plot violin plots
     for i, (treatment, df_list) in enumerate(sim_results_dict.items()):
         values = [dfc.find_value_in_results_df(df, result_key) for df in df_list]
+
+        # Calculate IQR and determine cutoffs
+        q1, q3 = np.percentile(values, [25, 75])
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+
+        # Filter out the extreme outliers based on the IQR
+        filtered_values = [x for x in values if lower_bound <= x <= upper_bound]
+
+        # Recalculate statistics on the filtered values
+        mean_value = np.mean(filtered_values)
+        median_value = np.median(filtered_values)
+        q1_filtered, q3_filtered = np.percentile(filtered_values, [25, 75])
+
+        # Convert to thousands ('K') and format as string
+        mean_value_str = f'{mean_value / 1000:.2f} K'
+        median_value_str = f'{median_value / 1000:.2f} K'
+        q1_filtered_str = f'{q1_filtered / 1000:.2f} K'
+        q3_filtered_str = f'{q3_filtered / 1000:.2f} K'
+
+        # Add the violin plot for the filtered values
         fig.add_trace(go.Violin(
-            y=values,
+            y=filtered_values,
             name=treatment,
-            line_color=colors[i % len(colors)],  # Assign color from the list
-            box_visible=True,  # Show the inner boxplot inside the violin
-            meanline_visible=True  # Show the mean line inside the violin
+            line_color=colors[i % len(colors)],
+            box_visible=True,
+            meanline_visible=True
         ))
+
+        # Add annotations for mean, median, Q1, Q3
+        annotations = [
+            {'x': i, 'y': mean_value, 'text': f'Mean: {mean_value_str}', 'xshift': 20, 'yshift': 20},
+            {'x': i, 'y': median_value, 'text': f'Median: {median_value_str}', 'xshift': 20, 'yshift': 10},
+            {'x': i, 'y': q1_filtered, 'text': f'Q1: {q1_filtered_str}', 'xshift': 20, 'yshift': 0},
+            {'x': i, 'y': q3_filtered, 'text': f'Q3: {q3_filtered_str}', 'xshift': 20, 'yshift': 10}
+        ]
+        for ann in annotations:
+            fig.add_annotation(x=ann['x'], y=ann['y'], text=ann['text'], showarrow=False,
+                               xshift=ann['xshift'], yshift=ann['yshift'])
 
     # Update layout for the figure
     fig.update_layout(
-        title=f'Violin Plots of CO2 Equivalents Total for Different Treatments with {sample_size} Simulations',
-        yaxis_title='CO2 Equivalents Total',
+        title=f'Violin Plots of {result_key} for Different Treatments',
+        yaxis_title=f'{result_key}',
         xaxis_title='Treatment',
-        violinmode='group'  # Group violin plots by treatment
+        violinmode='group'
     )
 
     # Show the plot
     fig.show()
 
-
-def plot_violin_plots_with_quotients_plotly(sim_results_dict, result_key='co2_eq_tot', comparison_scenario='no_treatment'):
-
+def plot_violin_plots_with_quotients_plotly(sim_results_dict, result_key='co2_eq_tot',
+                                            comparison_scenario='no_treatment'):
     # Create a Plotly figure
     fig = go.Figure()
 
     # Extract the comparison data for the specified scenario
-    comparison_data = [dfc.find_value_in_results_df(df, result_key) for df in sim_results_dict.get(comparison_scenario, [])]
+    comparison_data = [dfc.find_value_in_results_df(df, result_key) for df in
+                       sim_results_dict.get(comparison_scenario, [])]
     comparison_mean = np.mean(comparison_data)
 
     # Define a list of distinct colors for the violin plots
@@ -702,9 +734,20 @@ def plot_violin_plots_with_quotients_plotly(sim_results_dict, result_key='co2_eq
     # Loop through each scenario and compare it to the comparison_scenario
     for i, (scenario, df_list) in enumerate(sim_results_dict.items()):
         if scenario != comparison_scenario:
-            values = [dfc.find_value_in_results_df(df, result_key) / comparison_mean for df in df_list]
+            values = [dfc.find_value_in_results_df(df, result_key) / comparison_mean for df in df_list if
+                      comparison_mean != 0]
+
+            # Calculate IQR and determine cutoffs
+            q1, q3 = np.percentile(values, [25, 75])
+            iqr = q3 - q1
+            lower_bound = q1 - 1.5 * iqr
+            upper_bound = q3 + 1.5 * iqr
+
+            # Filter out the extreme outliers based on the IQR
+            filtered_values = [x for x in values if lower_bound <= x <= upper_bound]
+
             fig.add_trace(go.Violin(
-                y=values,
+                y=filtered_values,
                 name=f"{scenario}/{comparison_scenario}",
                 line_color=colors[i % len(colors)],
                 box_visible=True,
@@ -772,8 +815,6 @@ def plot_source_contributions_violin(sim_results_dict, source_columns):
 
 
 def plot_relative_source_contributions_violin(sim_results_dict, source_columns, total_impact_key):
-    import plotly.graph_objects as go
-
     # Define a color palette
     color_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
                      '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#17becf', '#9edae5']
@@ -785,30 +826,49 @@ def plot_relative_source_contributions_violin(sim_results_dict, source_columns, 
         # Create a new figure for each scenario
         fig = go.Figure()
 
-        # Extract total impact for the scenario
-        total_impact_data = [dfc.find_value_in_results_df(df, total_impact_key) for df in df_list]
+        # Initialize a dictionary to collect all contributions for each source
+        all_contributions = {source: [] for source in source_columns}
 
-        for source in source_columns:
-            # Extract data for each source
-            source_data = [dfc.find_value_in_results_df(df, source) for df in df_list]
+        for df in df_list:
+            # Extract total impact for the current dataframe
+            total_impact = dfc.find_value_in_results_df(df, total_impact_key)
 
-            # Calculate the relative contribution of each source to the total impact
-            relative_contributions = [100 * (source_value / total_impact) if total_impact else 0 for
-                                      source_value, total_impact in zip(source_data, total_impact_data)]
+            # Skip if total impact is zero to avoid division by zero
+            if total_impact == 0:
+                continue
 
-            # Check if the total contribution for this source is zero across all data points
-            if not any(relative_contributions):
-                continue  # Skip this source as its contribution is zero
+            # Calculate relative contributions for each source
+            for source in source_columns:
+                source_value = dfc.find_value_in_results_df(df, source)
+                relative_contribution = 100 * (source_value / total_impact)
+                all_contributions[source].append(relative_contribution)
 
-            # Add a violin plot for this source's relative contribution
-            fig.add_trace(go.Violin(
-                y=relative_contributions,
-                x=[source] * len(relative_contributions),
-                name=f"{source}",
-                line_color=color_mapping[source],  # Use the color mapping
-                box_visible=True,
-                meanline_visible=True
-            ))
+        # Filter out sources with only zero contributions before plotting
+        for source in list(all_contributions):  # Use list to make a copy of keys to iterate over
+            contributions = all_contributions[source]
+            if not any(contributions):  # If there are no non-zero contributions, remove the source
+                del all_contributions[source]
+
+        # Add violin plots to the figure for each source
+        for source, contributions in all_contributions.items():
+            if contributions:  # Check if there are contributions to plot
+                # Calculate Interquartile Range (IQR) and determine cutoffs, cutoff set at 1.5 * IQR
+                q1, q3 = np.percentile(contributions, [25, 75])
+                iqr = q3 - q1
+                lower_bound = q1 - 1.5 * iqr
+                upper_bound = q3 + 1.5 * iqr
+
+                # Filter out the extreme outliers
+                filtered_contributions = [x for x in contributions if lower_bound <= x <= upper_bound]
+
+                fig.add_trace(go.Violin(
+                    y=filtered_contributions,
+                    x=[source] * len(filtered_contributions),
+                    name=source,
+                    line_color=color_mapping[source],
+                    box_visible=True,
+                    meanline_visible=True
+                ))
 
         # Update layout for each scenario's figure
         fig.update_layout(
@@ -821,6 +881,7 @@ def plot_relative_source_contributions_violin(sim_results_dict, source_columns, 
 
         # Show the plot
         fig.show()
+
 
 
 # list with sources of CO2 eq. emissions for source contribution
@@ -843,111 +904,123 @@ if __name__ == "__main__":
     animal_parameters_to_sample = animal_config[animal_config[stdev_cols_animal].sum(axis=1) != 0]
     env_parameters_to_sample = env_config[env_config['stdev'] != 0]"""
 
-    # Read the combined configuration file
-    combined_config = dfc.read_file_to_dataframe(combined_config_path)
+    # Specify the file path
+    simulation_results_file_path = 'monte_carlo_simulation/simulation_results.h5'
+    sim_results_dict = {}
+    # Check if the file exists
+    if os.path.isfile(simulation_results_file_path):
+        print("File 'simulation_results.h5' exists. Skipping Monte Carlo simulation.")
+        sim_results_dict = load_from_hdf5(simulation_results_file_path)
+        print('Loading of the File complete, starting visualization.')
+
+    else:
+        print("File 'simulation_results.h5' does not exist. Running Monte Carlo simulation.")
+        # Read the combined configuration file
+        combined_config = dfc.read_file_to_dataframe(combined_config_path)
 
 
-    # Splitting the combined configuration
-    default_animal_config = dfc.read_file_to_dataframe(default_animal_config_path)
-    default_env_config = dfc.read_file_to_dataframe(default_environmental_config_path)
 
-    env_config_df, animal_config_df = split_combined_config(combined_config)
-    animal_config_df = transform_animal_config(animal_config_df)
+        # Splitting the combined configuration
+        default_animal_config = dfc.read_file_to_dataframe(default_animal_config_path)
+        default_env_config = dfc.read_file_to_dataframe(default_environmental_config_path)
 
-    # For Animal Configuration
-    # We want to make sure that both mu and sigma are non-zero for a parameter.
-    animal_parameters_to_sample = animal_config_df.loc[
-        (animal_config_df.filter(regex='_mu$').ne(0) & animal_config_df.filter(regex='_sigma$').ne(0)).all(axis=1)
-    ]
+        env_config_df, animal_config_df = split_combined_config(combined_config)
+        animal_config_df = transform_animal_config(animal_config_df)
 
-    # For Environmental Configuration
-    env_parameters_to_sample = env_config_df.loc[
-        ~env_config_df['Distribution function'].str.lower().eq('none') & (
-                (env_config_df['Distribution function'].str.lower().eq('triangle') &
-                 env_config_df[['upper', 'lower', 'median']].notna().all(axis=1)) |
-                (env_config_df['Distribution function'].str.lower().eq('lognormal') &
-                 env_config_df[['sigma', 'mu']].notna().all(axis=1))
-        )
+        # For Animal Configuration
+        # We want to make sure that both mu and sigma are non-zero for a parameter.
+        animal_parameters_to_sample = animal_config_df.loc[
+            (animal_config_df.filter(regex='_mu$').ne(0) & animal_config_df.filter(regex='_sigma$').ne(0)).all(axis=1)
         ]
 
-    # Create a dictionary for fast retrieval of mu and sigma values
-    mu_sigma_dict = {}
-    for _, row in animal_config_df.iterrows():
-        animal_type = row['animal_type']
-        stable_type = row['stable_type']
-        for col in animal_config_df.columns:
-            if col.endswith("_mu") or col.endswith("_sigma"):
-                param_base = col.rsplit("_", 1)[0]  # Extract base parameter name
-                key = (animal_type, stable_type, param_base)
-                mu_sigma_dict[key] = (row[f"{param_base}_mu"], row[f"{param_base}_sigma"])
+        # For Environmental Configuration
+        env_parameters_to_sample = env_config_df.loc[
+            ~env_config_df['Distribution function'].str.lower().eq('none') & (
+                    (env_config_df['Distribution function'].str.lower().eq('triangle') &
+                     env_config_df[['upper', 'lower', 'median']].notna().all(axis=1)) |
+                    (env_config_df['Distribution function'].str.lower().eq('lognormal') &
+                     env_config_df[['sigma', 'mu']].notna().all(axis=1))
+            )
+            ]
 
-    # Create a list to store samples for animal configuration
-    animal_samples = []
+        # Create a dictionary for fast retrieval of mu and sigma values
+        mu_sigma_dict = {}
+        for _, row in animal_config_df.iterrows():
+            animal_type = row['animal_type']
+            stable_type = row['stable_type']
+            for col in animal_config_df.columns:
+                if col.endswith("_mu") or col.endswith("_sigma"):
+                    param_base = col.rsplit("_", 1)[0]  # Extract base parameter name
+                    key = (animal_type, stable_type, param_base)
+                    mu_sigma_dict[key] = (row[f"{param_base}_mu"], row[f"{param_base}_sigma"])
 
-    # Iterate over each row in animal_config
-    for index, row in animal_config_df.iterrows():
-        for _ in range(sample_size):
-            sample_data = {'animal_type': row['animal_type'], 'stable_type': row['stable_type']}
+        # Create a list to store samples for animal configuration
+        animal_samples = []
 
-            # Iterate over each parameter in animal_config
-            for param_base in set(
-                    col.rsplit("_", 1)[0] for col in animal_config_df.columns if "_mu" in col or "_sigma" in col):
-                key = (row['animal_type'], row['stable_type'], param_base)
-                if key in mu_sigma_dict:
-                    mu_value, sigma_value = mu_sigma_dict[key]
-                    if mu_value and sigma_value:
-                        sample_value = generate_lognormal_mu_sigma(mu_value, sigma_value, 1)[0]
-                        sample_data[param_base] = sample_value
+        # Iterate over each row in animal_config
+        for index, row in animal_config_df.iterrows():
+            for _ in range(sample_size):
+                sample_data = {'animal_type': row['animal_type'], 'stable_type': row['stable_type']}
 
-            animal_samples.append(sample_data)
+                # Iterate over each parameter in animal_config
+                for param_base in set(
+                        col.rsplit("_", 1)[0] for col in animal_config_df.columns if "_mu" in col or "_sigma" in col):
+                    key = (row['animal_type'], row['stable_type'], param_base)
+                    if key in mu_sigma_dict:
+                        mu_value, sigma_value = mu_sigma_dict[key]
+                        if mu_value and sigma_value:
+                            sample_value = generate_lognormal_mu_sigma(mu_value, sigma_value, 1)[0]
+                            sample_data[param_base] = sample_value
 
-    # Generate samples for environmental parameters
-    env_samples = {}
-    for _, row in env_parameters_to_sample.iterrows():
-        param_name = row['name']
-        dist_function = row['Distribution function'].lower()
-        if dist_function == 'lognormal':
-            samples = generate_lognormal_mu_sigma(row['mu'], row['sigma'], sample_size)
-        elif dist_function == 'triangle':
-            samples = generate_triangle(row['lower'], row['upper'], row['median'], sample_size)
-        env_samples[param_name] = samples
+                animal_samples.append(sample_data)
 
-        # Assume farm_data_df_list is a list of dataframes, each representing a farm file
-    farm_data_dict = {file_name: dfc.read_file_to_dataframe(os.path.join(farm_files_path, file_name))
-                      for file_name in farm_paths_list}
+        # Generate samples for environmental parameters
+        env_samples = {}
+        for _, row in env_parameters_to_sample.iterrows():
+            param_name = row['name']
+            dist_function = row['Distribution function'].lower()
+            if dist_function == 'lognormal':
+                samples = generate_lognormal_mu_sigma(row['mu'], row['sigma'], sample_size)
+            elif dist_function == 'triangle':
+                samples = generate_triangle(row['lower'], row['upper'], row['median'], sample_size)
+            env_samples[param_name] = samples
 
-    # Generate random samples for each farm file
-    farm_samples_dict = {}
-    for farm_file_name, farm_df in farm_data_dict.items():
-        uncertainty_params = extract_uncertainty_parameters(farm_df)
-        farm_samples = generate_random_values_for_farm(uncertainty_params, sample_size)
-        farm_samples_dict[farm_file_name] = farm_samples
+            # Assume farm_data_df_list is a list of dataframes, each representing a farm file
+        farm_data_dict = {file_name: dfc.read_file_to_dataframe(os.path.join(farm_files_path, file_name))
+                          for file_name in farm_paths_list}
 
-    # Convert the samples dictionaries to DataFrames
-    df_env_samples = pd.DataFrame(env_samples)
-    df_animal_samples = pd.DataFrame(animal_samples)
+        # Generate random samples for each farm file
+        farm_samples_dict = {}
+        for farm_file_name, farm_df in farm_data_dict.items():
+            uncertainty_params = extract_uncertainty_parameters(farm_df)
+            farm_samples = generate_random_values_for_farm(uncertainty_params, sample_size)
+            farm_samples_dict[farm_file_name] = farm_samples
 
-    # Save the samples to Excel files
-    df_animal_samples.to_excel("monte_carlo_simulation/saved_animal_samples.xlsx", index=False)
-    df_env_samples.to_excel("monte_carlo_simulation/saved_env_samples.xlsx", index=False)
+        # Convert the samples dictionaries to DataFrames
+        df_env_samples = pd.DataFrame(env_samples)
+        df_animal_samples = pd.DataFrame(animal_samples)
 
-
-
-
+        # Save the samples to Excel files
+        df_animal_samples.to_excel("monte_carlo_simulation/saved_animal_samples.xlsx", index=False)
+        df_env_samples.to_excel("monte_carlo_simulation/saved_env_samples.xlsx", index=False)
 
 
-    simulation_results_dict = create_config_for_simulation(df_animal_samples, df_env_samples, default_env_config, default_animal_config,sample_size, farm_data_df_list, farm_samples_dict)
-    #sim_results_dict_test = load_from_hdf5()
+
+
+
+
+        sim_results_dict = create_config_for_simulation(df_animal_samples, df_env_samples, default_env_config, default_animal_config, sample_size, farm_data_df_list, farm_samples_dict)
+
     #write_dict_to_csv(simulation_results_dict, 'Debug/no_hdf5.csv')
     #write_dict_to_csv(sim_results_dict_test, 'Debug/hdf5.csv')
-    plot_violin_plots_plotly(simulation_results_dict)
-    plot_violin_plots_with_quotients_plotly(simulation_results_dict)
-    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="ad_only")
-    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="ad_biogas")
-    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad")
-    plot_violin_plots_with_quotients_plotly(simulation_results_dict, comparison_scenario="steam_ad_biogas")
+    plot_violin_plots_plotly(sim_results_dict)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_only")
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_biogas")
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad")
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad_biogas")
     #plot_source_contributions_violin(simulation_results_dict, co2_sources_list)
-    plot_relative_source_contributions_violin(simulation_results_dict, co2_sources_list, "co2_eq_tot")
+    plot_relative_source_contributions_violin(sim_results_dict, co2_sources_list, "co2_eq_tot")
 
 
 

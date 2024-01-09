@@ -100,7 +100,7 @@ combined_samples.to_excel("Debug/combined_samples.xlsx", index=False)
 
 sim_results_dict = uncertainties.load_from_hdf5()
 
-result_key = 'co2_eq_tot'
+result_key = 'co2_n2o_field'
 treatment_results = {}
 
 for treatment, df_list in sim_results_dict.items():
@@ -160,7 +160,7 @@ fig, axes = plt.subplots(num_treatments, 1, figsize=(10, fig_height_per_subplot 
 
 for treatment, variables in prcc_results.items():
     # Filter variables based on p-value
-    filtered_variables = {var: values for var, values in variables.items() if values['p_value'] <= 0.1}
+    filtered_variables = {var: values for var, values in variables.items() if values['p_value'] <= 0.5}
 
     # Continue only if there are any variables left after filtering
     if not filtered_variables:
