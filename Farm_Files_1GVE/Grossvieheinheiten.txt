@@ -1,0 +1,14 @@
+Milk Cow: 1
+Mother Cow: 1
+Heifer: 3
+Fattening Calf: 8
+Suckler Calf: 3
+Beef Cow: 1
+Breeding Bull: 1
+
+Fattening Pig: 6
+Breeding Pig: 2
+
+Laying Hen: 100
+Pullet: 250
+Broiler Chicken: 250

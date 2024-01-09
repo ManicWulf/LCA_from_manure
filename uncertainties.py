@@ -625,6 +625,8 @@ def plot_histograms_plotly(sim_results_dict, result_key='co2_eq_tot'):
     fig.show()
 
 
+
+
 def plot_boxplots_plotly(sim_results_dict, result_key='co2_eq_tot'):
     # Create a Plotly figure
     fig = go.Figure()
@@ -654,7 +656,7 @@ def plot_boxplots_plotly(sim_results_dict, result_key='co2_eq_tot'):
     fig.show()
 
 
-def plot_violin_plots_plotly(sim_results_dict, result_key='co2_eq_tot'):
+def plot_violin_plots_plotly(sim_results_dict, result_key='co2_eq_tot', save_html=False, save_jpeg=False):
     # Create a Plotly figure
     fig = go.Figure()
 
@@ -717,8 +719,106 @@ def plot_violin_plots_plotly(sim_results_dict, result_key='co2_eq_tot'):
     # Show the plot
     fig.show()
 
+    filename_plot = f'plots/violin_plots_{result_key}'
+    # Save as HTML
+    if save_html:
+        html_filename = f"{filename_plot}.html"
+        fig.write_html(html_filename)
+        print(f"Plot saved as {html_filename}")
+
+    # Save as JPEG
+    if save_jpeg:
+        jpeg_filename = f"{filename_plot}.jpeg"
+        fig.write_image(jpeg_filename)
+        print(f"Plot saved as {jpeg_filename}")
+
+
+def plot_violin_plots_co2_per_kwh(sim_results_dict, save_html=False, save_jpeg=False):
+    # Create a Plotly figure
+    fig = go.Figure()
+
+    # Define a list of distinct colors for the violin plots
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+              '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+    co2_eq = 'co2_eq_tot'
+
+    electricity = 'electricity_generated_tot'
+
+    # Loop through each treatment in the simulation_results_dict to plot violin plots
+    for i, (treatment, df_list) in enumerate(sim_results_dict.items()):
+        # Skip the iteration if treatment is 'no_treatment'
+        if treatment == 'no_treatment':
+            continue
+        values = [dfc.find_value_in_results_df(df, co2_eq) / dfc.find_value_in_results_df(df, electricity) for df in df_list]
+
+        # Calculate IQR and determine cutoffs
+        q1, q3 = np.percentile(values, [25, 75])
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+
+        # Filter out the extreme outliers based on the IQR
+        filtered_values = [x for x in values if lower_bound <= x <= upper_bound]
+
+        # Recalculate statistics on the filtered values
+        mean_value = np.mean(filtered_values)
+        median_value = np.median(filtered_values)
+        q1_filtered, q3_filtered = np.percentile(filtered_values, [25, 75])
+
+        # Convert to thousands ('K') and format as string
+        mean_value_str = f'{mean_value:.2f}'
+        median_value_str = f'{median_value:.2f}'
+        q1_filtered_str = f'{q1_filtered:.2f}'
+        q3_filtered_str = f'{q3_filtered:.2f}'
+
+        # Add the violin plot for the filtered values
+        fig.add_trace(go.Violin(
+            y=filtered_values,
+            name=treatment,
+            line_color=colors[i % len(colors)],
+            box_visible=True,
+            meanline_visible=True
+        ))
+
+        # Add annotations for mean, median, Q1, Q3
+        annotations = [
+            {'x': i, 'y': mean_value, 'text': f'Mean: {mean_value_str}', 'xshift': 0, 'yshift': 20},
+            {'x': i, 'y': median_value, 'text': f'Median: {median_value_str}', 'xshift': 0, 'yshift': 10},
+            {'x': i, 'y': q1_filtered, 'text': f'Q1: {q1_filtered_str}', 'xshift': 0, 'yshift': 0},
+            {'x': i, 'y': q3_filtered, 'text': f'Q3: {q3_filtered_str}', 'xshift': 0, 'yshift': 10}
+        ]
+        for ann in annotations:
+            fig.add_annotation(x=ann['x'], y=ann['y'], text=ann['text'], showarrow=False,
+                               xshift=ann['xshift'], yshift=ann['yshift'])
+
+    # Update layout for the figure
+    fig.update_layout(
+        title=f'Violin Plots of CO2 eq. per kWh electricity for Different Treatments',
+        yaxis_title=f'CO2 eq. / kWh',
+        xaxis_title='Treatment',
+        violinmode='group'
+    )
+
+    # Show the plot
+    fig.show()
+
+    filename_plot = f'plots/violin_plots_co2_per_kwh_electricity'
+    # Save as HTML
+    if save_html:
+        html_filename = f"{filename_plot}.html"
+        fig.write_html(html_filename)
+        print(f"Plot saved as {html_filename}")
+
+    # Save as JPEG
+    if save_jpeg:
+        jpeg_filename = f"{filename_plot}.jpeg"
+        fig.write_image(jpeg_filename)
+        print(f"Plot saved as {jpeg_filename}")
+
+
 def plot_violin_plots_with_quotients_plotly(sim_results_dict, result_key='co2_eq_tot',
-                                            comparison_scenario='no_treatment'):
+                                            comparison_scenario='no_treatment', save_html=False, save_jpeg=False):
     # Create a Plotly figure
     fig = go.Figure()
 
@@ -780,6 +880,19 @@ def plot_violin_plots_with_quotients_plotly(sim_results_dict, result_key='co2_eq
     # Show the plot
     fig.show()
 
+    filename_plot = f'plots/violin_plots_quotients_{result_key}_{comparison_scenario}'
+    # Save as HTML
+    if save_html:
+        html_filename = f"{filename_plot}.html"
+        fig.write_html(html_filename)
+        print(f"Plot saved as {html_filename}")
+
+    # Save as JPEG
+    if save_jpeg:
+        jpeg_filename = f"{filename_plot}.jpeg"
+        fig.write_image(jpeg_filename)
+        print(f"Plot saved as {jpeg_filename}")
+
 
 def plot_source_contributions_violin(sim_results_dict, source_columns):
     import plotly.graph_objects as go
@@ -814,7 +927,7 @@ def plot_source_contributions_violin(sim_results_dict, source_columns):
         fig.show()
 
 
-def plot_relative_source_contributions_violin(sim_results_dict, source_columns, total_impact_key):
+def plot_relative_source_contributions_violin(sim_results_dict, source_columns, total_impact_key, save_html=False, save_jpeg=False):
     # Define a color palette
     color_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
                      '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#17becf', '#9edae5']
@@ -881,6 +994,19 @@ def plot_relative_source_contributions_violin(sim_results_dict, source_columns, 
 
         # Show the plot
         fig.show()
+
+        filename_plot = f'plots/violin_plots_relative_source_contribution_{total_impact}_{scenario}'
+        # Save as HTML
+        if save_html:
+            html_filename = f"{filename_plot}.html"
+            fig.write_html(html_filename)
+            print(f"Plot saved as {html_filename}")
+
+        # Save as JPEG
+        if save_jpeg:
+            jpeg_filename = f"{filename_plot}.jpeg"
+            fig.write_image(jpeg_filename)
+            print(f"Plot saved as {jpeg_filename}")
 
 
 
@@ -1013,16 +1139,17 @@ if __name__ == "__main__":
 
     #write_dict_to_csv(simulation_results_dict, 'Debug/no_hdf5.csv')
     #write_dict_to_csv(sim_results_dict_test, 'Debug/hdf5.csv')
-    plot_violin_plots_plotly(sim_results_dict)
-    plot_violin_plots_with_quotients_plotly(sim_results_dict)
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_only")
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_biogas")
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad")
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad_biogas")
+    plot_violin_plots_co2_per_kwh(sim_results_dict, save_html=True)
+    """plot_violin_plots_plotly(sim_results_dict, save_html=True, save_jpeg=False)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, save_html=True, save_jpeg=False)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_only", save_html=True, save_jpeg=False)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_biogas", save_html=True, save_jpeg=False)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad", save_html=True, save_jpeg=False)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad_biogas", save_html=True, save_jpeg=False)
     #plot_source_contributions_violin(simulation_results_dict, co2_sources_list)
-    plot_relative_source_contributions_violin(sim_results_dict, co2_sources_list, "co2_eq_tot")
+    plot_relative_source_contributions_violin(sim_results_dict, co2_sources_list, "co2_eq_tot", save_html=True, save_jpeg=False)
 
-
+"""
 
 
 

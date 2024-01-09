@@ -14,6 +14,7 @@ import uncertainties
 
 
 
+
 # define path to farm files folder and create list with dataframes from the farm files
 farm_files_path = "farm files/"
 farm_paths_list = os.listdir(farm_files_path)
@@ -160,7 +161,7 @@ fig, axes = plt.subplots(num_treatments, 1, figsize=(10, fig_height_per_subplot 
 
 for treatment, variables in prcc_results.items():
     # Filter variables based on p-value
-    filtered_variables = {var: values for var, values in variables.items() if values['p_value'] <= 0.5}
+    filtered_variables = {var: values for var, values in variables.items() if values['p_value'] <= 0.15}
 
     # Continue only if there are any variables left after filtering
     if not filtered_variables:
@@ -197,44 +198,5 @@ for treatment, variables in prcc_results.items():
 
 
 
-
-
-
-
-"""
-Code for improving efficiency
-
-
-def main():
-    # define path to animal and environmental config
-    default_animal_config_path = "default_configs/default_animal_config.xlsx"
-    default_environmental_config_path = "default_configs/default_environmental_config.xlsx"
-
-    # define path to farm files folder and create list with dataframes from the farm files
-    farm_files_path = "farm files/"
-    farm_paths_list = os.listdir(farm_files_path)
-    farm_data_df_list = []
-
-    for filename in farm_paths_list:
-        # Create the full file path by concatenating the directory and the filename
-        full_file_path = os.path.join(farm_files_path, filename)
-        # Use the full file path to read the data into a dataframe
-        dataframe = dfc.read_file_to_dataframe(full_file_path)
-        if isinstance(dataframe, pd.DataFrame):
-            farm_data_df_list.append(dataframe)
-        else:
-            print(dataframe)  # This will print the error message if the file could not be processed
-
-    # Read the configuration files
-    animal_config = dfc.read_file_to_dataframe(default_animal_config_path)
-    env_config = dfc.read_file_to_dataframe(default_environmental_config_path)
-
-    no_treatment_df, ad_only_df, ad_biogas_df, steam_ad_df, steam_ad_biogas_df = uncertainties.lca_calculation(
-        env_config, animal_config)
-
-
-if __name__ == "__main__":
-    cProfile.run('main()', 'Debug/profile_output')
-"""
 
 
