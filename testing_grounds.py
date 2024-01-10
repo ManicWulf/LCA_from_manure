@@ -101,7 +101,7 @@ combined_samples.to_excel("Debug/combined_samples.xlsx", index=False)
 
 sim_results_dict = uncertainties.load_from_hdf5()
 
-result_key = 'co2_n2o_field'
+result_key = 'co2_eq_tot'
 treatment_results = {}
 
 for treatment, df_list in sim_results_dict.items():
@@ -186,7 +186,7 @@ for treatment, variables in prcc_results.items():
     plt.errorbar(correlations, range(1, len(variable_names) + 1), xerr=error_bars, fmt='o')
     plt.yticks(range(1, len(variable_names) + 1), variable_names)
     plt.xlabel('PRCC')
-    plt.title(f'PRCC Values for {treatment}')
+    plt.title(f'PRCC Values for {result_key} in {treatment} scenario')
     plt.grid(True)
 
     # Improve layout
