@@ -3,6 +3,7 @@ import numpy as np
 import os
 import time
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import logging
 from scipy.stats import norm
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -52,7 +53,7 @@ Change the value for sample_size to adjust the number of simulation runs
 
 
 # Define the sample_size variable
-sample_size = 15000  # You can adjust this value as needed
+sample_size = 150  # You can adjust this value as needed
 
 
 def write_dict_to_csv(simulation_results_dict, file_path):
@@ -705,7 +706,7 @@ def plot_boxplots_plotly(sim_results_dict, result_key='co2_eq_tot'):
     fig.show()
 
 
-def plot_violin_plots_plotly(sim_results_dict, result_key='co2_eq_tot', save_html=False, save_jpeg=False):
+def plot_violin_plots_plotly(sim_results_dict, result_key='co2_eq_tot', save_html=False, save_pdf=False):
     # Create a Plotly figure
     fig = go.Figure()
 
@@ -783,14 +784,14 @@ def plot_violin_plots_plotly(sim_results_dict, result_key='co2_eq_tot', save_htm
         fig.write_html(html_filename)
         print(f"Plot saved as {html_filename}")
 
-    # Save as JPEG
-    if save_jpeg:
-        jpeg_filename = f"{filename_plot}.jpeg"
-        fig.write_image(jpeg_filename)
-        print(f"Plot saved as {jpeg_filename}")
+    # Save as pdf
+    if save_pdf:
+        pdf_filename = f"{filename_plot}.pdf"
+        fig.write_image(pdf_filename)
+        print(f"Plot saved as {pdf_filename}")
 
 
-def plot_violin_plots_co2_per_kwh(sim_results_dict, result_key, save_html=False, save_jpeg=False):
+def plot_violin_plots_co2_per_kwh(sim_results_dict, result_key, save_html=False, save_pdf=False):
     # Create a Plotly figure
     fig = go.Figure()
 
@@ -880,14 +881,14 @@ def plot_violin_plots_co2_per_kwh(sim_results_dict, result_key, save_html=False,
         print(f"Plot saved as {html_filename}")
 
     # Save as JPEG
-    if save_jpeg:
-        jpeg_filename = f"{filename_plot}.jpeg"
-        fig.write_image(jpeg_filename)
-        print(f"Plot saved as {jpeg_filename}")
+    if save_pdf:
+        pdf_filename = f"{filename_plot}.pdf"
+        fig.write_image(pdf_filename)
+        print(f"Plot saved as {pdf_filename}")
 
 
 def plot_violin_plots_with_quotients_plotly(sim_results_dict, result_key='co2_eq_tot',
-                                            comparison_scenario='no_treatment', save_html=False, save_jpeg=False):
+                                            comparison_scenario='no_treatment', save_html=False, save_pdf=False):
     # Create a Plotly figure
     fig = go.Figure()
 
@@ -967,10 +968,10 @@ def plot_violin_plots_with_quotients_plotly(sim_results_dict, result_key='co2_eq
         print(f"Plot saved as {html_filename}")
 
     # Save as JPEG
-    if save_jpeg:
-        jpeg_filename = f"{filename_plot}.jpeg"
-        fig.write_image(jpeg_filename)
-        print(f"Plot saved as {jpeg_filename}")
+    if save_pdf:
+        pdf_filename = f"{filename_plot}.pdf"
+        fig.write_image(pdf_filename)
+        print(f"Plot saved as {pdf_filename}")
 
 
 def plot_source_contributions_violin(sim_results_dict, source_columns):
@@ -1006,7 +1007,7 @@ def plot_source_contributions_violin(sim_results_dict, source_columns):
         fig.show()
 
 
-def plot_relative_source_contributions_violin(sim_results_dict, source_columns, total_impact_key, save_html=False, save_jpeg=False):
+def plot_relative_source_contributions_violin(sim_results_dict, source_columns, total_impact_key, save_html=False, save_pdf=False):
     # Define a color palette
     color_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
                      '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#17becf', '#9edae5']
@@ -1090,12 +1091,119 @@ def plot_relative_source_contributions_violin(sim_results_dict, source_columns, 
             fig.write_html(html_filename)
             print(f"Plot saved as {html_filename}")
 
-        # Save as JPEG
-        if save_jpeg:
-            jpeg_filename = f"{filename_plot}.jpeg"
-            fig.write_image(jpeg_filename)
-            print(f"Plot saved as {jpeg_filename}")
+        # Save as pdf
+        if save_pdf:
+            pdf_filename = f"{filename_plot}.pdf"
+            fig.write_image(pdf_filename)
+            print(f"Plot saved as {pdf_filename}")
 
+
+def plot_relative_source_contributions_violin_combined(sim_results_dict, source_columns, total_impact_key, save_html=False,
+                                                       save_pdf=False):
+    # Define a color palette
+    color_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+                     '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#17becf', '#9edae5']
+
+    # Create a color mapping for each source
+    color_mapping = {source: color_palette[i % len(color_palette)] for i, source in enumerate(source_columns)}
+
+    # Manually specify the order of scenarios to ensure correct plotting
+    scenario_order = ['no_treatment', 'ad_only', 'ad_biogas', 'steam_ad', 'steam_ad_biogas']
+
+    # Adjust the subplot layout
+    # Calculate the total number of rows needed, considering the special layout for PW 1
+    total_rows = 1 + ((len(scenario_order) - 1) // 2)
+
+    fig = make_subplots(
+        rows=total_rows, cols=2,
+        subplot_titles=[pathway_name_mapping.get(scenario, scenario) for scenario in scenario_order],
+        specs=[[{'colspan': 2}, None]] + [[{}, {}] for _ in range(total_rows - 1)],
+        vertical_spacing=0.18  # Adjust this value to reduce space between rows
+    )
+    # Loop through each annotation (subplot title) and adjust the font size
+    for annotation in fig.layout.annotations:
+        annotation.font.size = 55  # Set your desired font size here
+
+    subplot_index = 1  # Initialize subplot index
+
+    for scenario in scenario_order:
+        df_list = sim_results_dict[scenario]
+        all_contributions = {source: [] for source in source_columns}
+
+        for df in df_list:
+            total_impact = dfc.find_value_in_results_df(df, total_impact_key)
+            if total_impact == 0:
+                continue
+
+            for source in source_columns:
+                source_value = dfc.find_value_in_results_df(df, source)
+                relative_contribution = 100 * (source_value / total_impact)
+                all_contributions[source].append(relative_contribution)
+
+        for source in list(all_contributions):
+            contributions = all_contributions[source]
+            if not any(contributions):
+                del all_contributions[source]
+
+        for source, contributions in all_contributions.items():
+            if contributions:
+                q1, q3 = np.percentile(contributions, [25, 75])
+                iqr = q3 - q1
+                lower_bound = q1 - 1.5 * iqr
+                upper_bound = q3 + 1.5 * iqr
+
+                filtered_contributions = [x for x in contributions if lower_bound <= x <= upper_bound]
+
+                # Correct calculation for row and col
+                if subplot_index == 1:  # Special case for "PW 1"
+                    row, col = 1, 1
+                else:
+                    # Adjust calculation for rows and columns after "PW 1"
+                    adjusted_index = subplot_index - 2  # Adjust index since "PW 1" takes up the whole first row
+                    row = adjusted_index // 2 + 2  # Start from the second row for "PW 2" and onwards
+                    col = adjusted_index % 2 + 1  # Alternate between the two columns
+
+                fig.add_trace(go.Violin(
+                    y=filtered_contributions,
+                    x=[source_name_mapping.get(source, source)] * len(filtered_contributions),
+                    name=source_name_mapping.get(source, source),
+                    line_color=color_mapping[source],
+                    box_visible=True,
+                    meanline_visible=True
+                ), row=row, col=col)
+
+        subplot_index += 1  # Increment subplot index after each scenario
+
+    # Adjust the figure's layout to make more room
+    fig.update_layout(
+        height=3000,  # Adjust based on the number of rows and desired size
+        width=4000,
+        showlegend=False,
+        title_text=f'Relative Source Contributions to Total {total_impact_key}',
+        title_font_size=55,  # Adjust the main title font size here
+    )
+
+    # Update axes for all subplots if needed (example for x-axis)
+    fig.update_xaxes(title_font=dict(size=45),
+                     tickfont=dict(size=40))  # Adjust axis title and tick font sizes for x-axis
+    fig.update_yaxes(title_font=dict(size=45),
+                     tickfont=dict(size=40))  # Adjust axis title and tick font sizes for y-axis
+
+    # Show the plot
+    fig.show()
+
+    filename_plot = f'plots/violin_plots_relative_source_contribution_combined_{total_impact_key}_all_scenarios'
+    # Save as HTML
+    if save_html:
+        html_filename = f"{filename_plot}.html"
+        fig.write_html(html_filename)
+        print(f"Plot saved as {html_filename}")
+
+    # Save as pdf
+    if save_pdf:
+        pdf_filename = f"{filename_plot}.pdf"
+        fig.write_image(pdf_filename)
+        print(f"Plot saved as {pdf_filename}")
 
 
 # list with sources of CO2 eq. emissions for source contribution
@@ -1250,17 +1358,20 @@ if __name__ == "__main__":
     write_dict_to_csv(sim_results_dict_test, 'Debug/hdf5.csv')"""
 
 
-    plot_violin_plots_co2_per_kwh(sim_results_dict, 'co2_per_kwh_el', save_html=True, save_jpeg=False)
-    plot_violin_plots_co2_per_kwh(sim_results_dict, 'co2_per_kwh_energy', save_html=True, save_jpeg=False)
-    plot_violin_plots_plotly(sim_results_dict, save_html=True, save_jpeg=False)
-    plot_violin_plots_plotly(sim_results_dict, "daly_nh3", save_html=True, save_jpeg=False)
-    plot_violin_plots_plotly(sim_results_dict, "co2_electricity_mix", save_html=True, save_jpeg=False)
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, save_html=True, save_jpeg=False)
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_only", save_html=True, save_jpeg=False)
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_biogas", save_html=True, save_jpeg=False)
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad", save_html=True, save_jpeg=False)
-    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad_biogas", save_html=True, save_jpeg=False)
-    plot_relative_source_contributions_violin(sim_results_dict, co2_sources_list, "co2_eq_tot", save_html=True, save_jpeg=False)
+    """plot_violin_plots_co2_per_kwh(sim_results_dict, 'co2_per_kwh_el', save_html=True, save_pdf=True)
+    plot_violin_plots_co2_per_kwh(sim_results_dict, 'co2_per_kwh_energy', save_html=True, save_pdf=True)
+    plot_violin_plots_plotly(sim_results_dict, save_html=True, save_pdf=True)
+    plot_violin_plots_plotly(sim_results_dict, "daly_nh3", save_html=True, save_pdf=True)
+    plot_violin_plots_plotly(sim_results_dict, "co2_electricity_mix", save_html=True, save_pdf=True)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, save_html=True, save_pdf=True)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_only", save_html=True, save_pdf=True)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="ad_biogas", save_html=True, save_pdf=True)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad", save_html=True, save_pdf=True)
+    plot_violin_plots_with_quotients_plotly(sim_results_dict, comparison_scenario="steam_ad_biogas", save_html=True, save_pdf=True)
+    plot_relative_source_contributions_violin(sim_results_dict, co2_sources_list, "co2_eq_tot", save_html=True, save_pdf=True)"""
+
+    plot_relative_source_contributions_violin_combined(sim_results_dict, co2_sources_list, "co2_eq_tot", save_html=True,
+                                                       save_pdf=False)
 
 
 
